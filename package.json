@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "build": "elm-make src/main.elm --yes --output index.html"
+  },
+  "dependencies": {
+    "elm": "^0.17.0"
+  }
+}

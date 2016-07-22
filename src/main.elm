@@ -6,6 +6,8 @@ import Html.App as App
 import Time
 
 
+import Game.Main as Game
+
 
 type alias Model =
     { position : Int
