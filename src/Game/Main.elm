@@ -19,20 +19,40 @@ type alias Model =
 
 type Message
     = Tick
+    | AddPlayer
     | PlayerMessage PlayerId Player.Message
 
 
 
+init =
+    Model 1 []
+
 
 tick model =
-    model
+    let
+        mapPlayer (id, player) =
+            (id, Player.update Player.Tick player)
+
+        newPlayers =
+            List.map mapPlayer model.players
+    in
+        { model | players = newPlayers }
 
 
 
 update : Message -> Model -> Model
 update message model =
     case message of
-        Tick -> tick model
+        Tick ->
+            tick model
+
+        AddPlayer ->
+            { model
+            | players = (model.nextPlayerId, Player.init) :: model.players
+            , nextPlayerId = model.nextPlayerId + 1
+            }
+
+
         PlayerMessage playerId playerMessage ->
             let
                 updatePlayer (id, player) =

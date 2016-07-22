@@ -12,14 +12,21 @@ type alias Model =
 
 
 
-type Message =
-    CommandShip Ship.Message
+type Message
+    = Tick
+    | CommandShip Ship.Message
 
+
+init =
+    Model Ship.init 0
 
 
 update : Message -> Model -> Model
 update message model =
     case message of
+        Tick ->
+            { model | ship = Ship.update Ship.Tick model.ship }
+
         CommandShip shipMessage ->
             { model | ship = Ship.update shipMessage model.ship }
 
