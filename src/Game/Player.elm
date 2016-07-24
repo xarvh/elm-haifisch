@@ -2,6 +2,7 @@ module Game.Player exposing (..)
 
 
 import Game.Ship as Ship
+import Time
 
 
 
@@ -13,7 +14,7 @@ type alias Model =
 
 
 type Message
-    = Tick
+    = Tick Time.Time
     | CommandShip Ship.Message
 
 
@@ -24,8 +25,8 @@ init =
 update : Message -> Model -> Model
 update message model =
     case message of
-        Tick ->
-            { model | ship = Ship.update Ship.Tick model.ship }
+        Tick dt ->
+            { model | ship = Ship.update (Ship.Tick dt) model.ship }
 
         CommandShip shipMessage ->
             { model | ship = Ship.update shipMessage model.ship }

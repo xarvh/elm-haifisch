@@ -5,8 +5,6 @@ import Element
 import Html.App as App
 import Time
 import Keyboard
-
-
 import Game.Main as Game
 import Game.Player as Player
 import Game.Ship as Ship
@@ -25,6 +23,13 @@ type Message
     | Tick Time.Time
 
 
+
+
+-- Game update will be determined by the server, so no point in using the browser's animation frame
+granularity =
+    100 * Time.millisecond
+
+
 noCmd model =
     (model, Cmd.none)
 
@@ -38,18 +43,26 @@ update message model =
         PlayerInput playerMessage ->
             noCmd { model | game = Game.update (Game.PlayerMessage model.currentPlayerId playerMessage) model.game }
 
-        Tick time ->
-            noCmd { model | game = Game.update Game.Tick model.game }
-
+        Tick epoch ->
+            noCmd { model | game = Game.update (Game.Tick granularity) model.game }
 
 
 
 drawShip player =
-    Collage.ngon 5 50
-        |> Collage.filled Color.blue
-        |> Collage.rotate player.ship.angle
-        |> Collage.move (player.ship.position.x - Ship.size/2, player.ship.position.y - Ship.size/2)
-
+    let
+        size = 30
+        half = size / 2
+    in
+        Collage.group
+            [ Collage.ngon 3 half
+                |> Collage.filled Color.blue
+                |> Collage.move (0.6 * half, 0)
+            , Collage.ngon 6 half
+                |> Collage.filled Color.blue
+                |> Collage.move (-0.6 * half, 0)
+            ]
+                |> Collage.rotate player.ship.angle
+                |> Collage.move (player.ship.position.x - Ship.size/2, player.ship.position.y - Ship.size/2)
 
 
 
@@ -91,7 +104,7 @@ subscriptions model =
 
     in
         Sub.batch
-            [ Time.every (100 * Time.millisecond) Tick
+            [ Time.every granularity Tick
             , Keyboard.ups (keyPressDispatcher (w .up) shipControls)
             , Keyboard.downs (keyPressDispatcher (w .down) shipControls)
             ]
@@ -105,7 +118,7 @@ init =
         currentPlayerId =
             Maybe.withDefault 0 <| List.head newGame.players `Maybe.andThen` (fst >> Just)
     in
-        ( Model newGame currentPlayerId, Cmd.none)
+        ( Model newGame currentPlayerId, Cmd.none )
 
 
 

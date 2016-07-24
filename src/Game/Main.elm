@@ -1,7 +1,9 @@
 module Game.Main exposing (..)
 
 
+
 import Game.Player as Player
+import Time
 
 
 
@@ -18,7 +20,7 @@ type alias Model =
 
 
 type Message
-    = Tick
+    = Tick Time.Time
     | AddPlayer
     | PlayerMessage PlayerId Player.Message
 
@@ -28,10 +30,11 @@ init =
     Model 1 []
 
 
-tick model =
+tick : Time.Time -> Model -> Model
+tick dt model =
     let
         mapPlayer (id, player) =
-            (id, Player.update Player.Tick player)
+            (id, Player.update (Player.Tick dt) player)
 
         newPlayers =
             List.map mapPlayer model.players
@@ -43,8 +46,8 @@ tick model =
 update : Message -> Model -> Model
 update message model =
     case message of
-        Tick ->
-            tick model
+        Tick dt ->
+            tick dt model
 
         AddPlayer ->
             { model
