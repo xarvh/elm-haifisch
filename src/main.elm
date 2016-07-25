@@ -1,5 +1,4 @@
 
-import Collage exposing (..)
 import Color exposing (..)
 import Element
 import Html.App as App
@@ -48,29 +47,8 @@ update message model =
 
 
 
-drawShip player =
-    let
-        size = 30
-        half = size / 2
-    in
-        Collage.group
-            [ Collage.ngon 3 half
-                |> Collage.filled Color.blue
-                |> Collage.move (0.6 * half, 0)
-            , Collage.ngon 6 half
-                |> Collage.filled Color.blue
-                |> Collage.move (-0.6 * half, 0)
-            ]
-                |> Collage.rotate player.ship.angle
-                |> Collage.move (player.ship.position.x - Ship.size/2, player.ship.position.y - Ship.size/2)
-
-
-
 view model =
- Element.toHtml
-    <| Collage.collage (floor Ship.size) (floor Ship.size)
-    <| List.map (snd >> drawShip) model.game.players
-
+    View.render model.currentPlayerId model.game
 
 
 
@@ -99,14 +77,14 @@ keyPressDispatcher what keyCodeMap keyCode =
 
 subscriptions model =
     let
-        w component shipMessages =
+        key component shipMessages =
             (component shipMessages) |> Player.CommandShip |> PlayerInput
 
     in
         Sub.batch
             [ Time.every granularity Tick
-            , Keyboard.ups (keyPressDispatcher (w .up) shipControls)
-            , Keyboard.downs (keyPressDispatcher (w .down) shipControls)
+            , Keyboard.ups <| keyPressDispatcher (key .up) shipControls
+            , Keyboard.downs <| keyPressDispatcher (key .down) shipControls
             ]
 
 
