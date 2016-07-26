@@ -20,7 +20,7 @@ type TurnDirection
 
 
 -- TODO: this should also go somewhere else, possibly the game model
-size = 600.0
+size = 1.0
 maxVelocity = size / Time.second
 
 shipThrust = 0.1 * maxVelocity / Time.second

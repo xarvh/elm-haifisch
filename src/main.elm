@@ -1,12 +1,12 @@
 
 import Color exposing (..)
-import Element
 import Html.App as App
 import Time
 import Keyboard
 import Game.Main as Game
 import Game.Player as Player
 import Game.Ship as Ship
+import View
 
 
 
