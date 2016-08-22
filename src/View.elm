@@ -2,18 +2,17 @@ module View exposing (render)
 
 
 
-import Game.Main as Game
+import GameMain as Game
 import Html
 import String
 import Svg
+import Svg.Events as E
 import Svg.Attributes as A
 
 
 
-drawShip viewerPlayerId (id, player) =
+drawShip viewerPlayerId ship =
     let
-        ship = player.ship
-
         size = 0.05
     in
         Svg.path
@@ -37,12 +36,13 @@ drawShip viewerPlayerId (id, player) =
                 , "stroke-width: " ++ toString size
                 ]
             ]
+--             , E.onClick ]
             []
 
 
 
 
-render : Int -> Game.Model -> Html.Html a
+render : Int -> Game.Game -> Html.Html a
 render viewerPlayerId gameModel =
     Svg.svg
         [ A.width "50%"
@@ -50,5 +50,5 @@ render viewerPlayerId gameModel =
         , A.viewBox "0 0 1 1"
         ]
         <| List.concat
-            [ List.map (drawShip viewerPlayerId) gameModel.players
+            [ List.map (drawShip viewerPlayerId) gameModel.ships
             ]
