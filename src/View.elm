@@ -42,6 +42,34 @@ drawShip viewerPlayerId ship =
             []
 
 
+star =
+    Svg.circle
+        [ A.cx "0"
+        , A.cy "0"
+        , A.r "0.05"
+        , A.fill "#ff0"
+        ]
+        []
+
+
+
+outerWellMarker =
+    Svg.ellipse
+        [ A.cx "0"
+        , A.cy "0"
+        , A.rx "0.95"
+        , A.ry "0.95"
+
+        , A.fill "none"
+        , A.stroke "#999"
+        , A.strokeWidth "0.01"
+        , A.strokeDasharray "6%, 6%"
+        ]
+        []
+
+
+
+
 
 
 render : Int -> Game.Game -> Html.Html UI.Message
@@ -50,10 +78,17 @@ render viewerPlayerId gameModel =
                 q = Debug.log "D" gameModel.ships
             in
     Svg.svg
-        [ A.width "50%"
-        , A.height "50%"
-        , A.viewBox "0 0 1 1"
+        [ A.width "100%"
+        , A.height "100%"
+        , A.viewBox "-1 -1 2 2"
+        , A.preserveAspectRatio "xMidYMid meet"
+
+        , A.style "border: 1px solid #333333;"
+
+
         ]
         <| List.concat
-            [ List.map (drawShip viewerPlayerId) gameModel.ships
+            [ [star]
+            , [outerWellMarker]
+            , List.map (drawShip viewerPlayerId) gameModel.ships
             ]
