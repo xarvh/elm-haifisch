@@ -8,6 +8,7 @@ import String
 import Svg
 import Svg.Events as E
 import Svg.Attributes as A
+import UI
 
 
 
@@ -35,15 +36,19 @@ drawShip viewerPlayerId ship =
                 , "stroke: #055"
                 , "stroke-width: " ++ toString size
                 ]
+
+            , E.onClick (UI.PlayerInput Game.ShipMove)
             ]
---             , E.onClick ]
             []
 
 
 
 
-render : Int -> Game.Game -> Html.Html a
+render : Int -> Game.Game -> Html.Html UI.Message
 render viewerPlayerId gameModel =
+            let
+                q = Debug.log "D" gameModel.ships
+            in
     Svg.svg
         [ A.width "50%"
         , A.height "50%"

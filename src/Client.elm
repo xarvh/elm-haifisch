@@ -1,59 +1,23 @@
 module Client exposing (..)
 
-import Color exposing (..)
-import GameMain as Game
-import GameEmpire as Empire
+
 import Keyboard
 import Time
 import View
+import UI
 
 
+init =
+    UI.init
 
-type alias Model =
-    { game : Game.Game
-
-    -- TODO: right now this refers to an **EmpireId**
-    , currentPlayerId : Int
-    }
-
-
-type Message
-    = Noop
-    | PlayerInput Game.Command
-    | Tick Time.Time
-
-
-
-
--- Game update will be determined by the server, so no point in using the browser's animation frame
-granularity =
-    100 * Time.millisecond
-
-
-noCmd model =
-    (model, Cmd.none)
-
-
-update : Message -> Model -> (Model, Cmd Message)
-update message model =
-    case message of
-        Noop ->
-            noCmd model
-
-        PlayerInput empireCommand ->
-            -- TODO: do not execute the command here, but send it to the server
-            noCmd { model | game = Game.update (Game.EmpireCommands model.currentPlayerId empireCommand) model.game }
-
-        -- TODO
-        -- MessageFromServer message ->
-
-        Tick epoch ->
-            noCmd { model | game = Game.update Game.Tick model.game }
-
-
+update =
+    UI.update
 
 view model =
     View.render model.currentPlayerId model.game
+
+
+
 
 
 
@@ -72,18 +36,6 @@ view model =
 --         }
 --     ]
 
-
-
-
-init =
-    let
-        newGame =
-            Game.init
-
-        currentPlayerId = 0
---             Maybe.withDefault 0 <| List.head newGame.players `Maybe.andThen` (fst >> Just)
-    in
-        ( Model newGame currentPlayerId, Cmd.none )
 
 
 

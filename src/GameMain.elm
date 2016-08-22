@@ -3,7 +3,7 @@ module GameMain exposing (..)
 
 import GameCommon exposing (..)
 
-import GameShip as Ship
+import GameShip as Ship exposing (Ship)
 import GameEmpire as Empire
 
 
@@ -34,14 +34,28 @@ type Command
 
 
 
+size = 1
+
+
 
 
 -- FUNCTIONS
+addShip : Game -> Game
+addShip game =
+    let
+        ship = Ship game.nextId 0 { x = size/2, y = size/2} { x = 0, y = 0 } 0 []
+    in
+        { game
+        | nextId = game.nextId + 1
+        , ships = ship :: game.ships
+        }
+
+
 
 
 
 init =
-    Game 1 [] [] 0
+    addShip <| Game 1 [] [] 0
 
 
 
