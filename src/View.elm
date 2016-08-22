@@ -3,6 +3,7 @@ module View exposing (render)
 
 
 import GameMain as Game
+import GameCommon exposing (starSystemOuterRadius)
 import Html
 import String
 import Svg
@@ -57,8 +58,8 @@ outerWellMarker =
     Svg.ellipse
         [ A.cx "0"
         , A.cy "0"
-        , A.rx "0.95"
-        , A.ry "0.95"
+        , A.rx <| toString starSystemOuterRadius
+        , A.ry <| toString starSystemOuterRadius
 
         , A.fill "none"
         , A.stroke "#999"

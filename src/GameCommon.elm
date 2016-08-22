@@ -29,3 +29,14 @@ type alias Vector =
     , y : Float
     }
 
+
+
+
+-- This is the max distance a ship can be from a star outside FTL
+starSystemOuterRadius : Float
+starSystemOuterRadius =
+    0.96
+
+
+
+
