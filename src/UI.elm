@@ -1,16 +1,15 @@
 module UI exposing (..)
 
 
-import GameMain as Game
+-- import GameCommon exposing (Pos)
 import GameEmpire as Empire
+import GameMain as Game
 
-
-import Native.SvgMouse
-
+import Html.Events
+import Json.Decode as Json exposing ((:=))
 import Svg
 import Svg.Events
-import Json.Decode as Json exposing ((:=))
-import Html.Events
+import SvgMouse
 
 
 
@@ -65,7 +64,7 @@ mouseMoveOn : String -> Svg.Attribute Message
 mouseMoveOn selector =
     let
         dispatcher clientX clientY =
-            MouseMove <| Native.SvgMouse.transform selector { x = clientX, y = clientY }
+            MouseMove <| SvgMouse.transform selector clientX clientY
 
         position =
             Json.object2 dispatcher ("clientX" := Json.int) ("clientY" := Json.int)
@@ -88,8 +87,8 @@ onClickNoBubble tagger =
 
 type Message
     = Noop
-    | PlayerInput Game.Command
-    | MouseMove { x : Float, y : Float }
+--     | PlayerInput Game.Command
+    | MouseMove (Float, Float)
     | UserClicksShip Int
     | UserSelectsNone
     | Tick
@@ -106,26 +105,24 @@ update message model =
         Noop ->
             noCmd model
 
-        PlayerInput empireCommand ->
-            let
-                x = Debug.log "c" empireCommand
-            -- TODO: do not execute the command here, but send it to the server
-            in
-                noCmd { model | game = Game.update (Game.EmpireCommands model.currentPlayerId empireCommand) model.game }
+--         PlayerInput empireCommand ->
+--             let
+--                 x = Debug.log "c" empireCommand
+--             -- TODO: do not execute the command here, but send it to the server
+--             in
+--                 noCmd { model | game = Game.update (Game.EmpireCommands model.currentPlayerId empireCommand) model.game }
 
         -- TODO
         -- MessageFromServer message ->
 
-        MouseMove {x, y} ->
+        MouseMove ( x, y ) ->
             noCmd model
-
 
         UserClicksShip shipId ->
             noCmd <| select ShipSelection [shipId] model
 
         UserSelectsNone ->
             noCmd <| select ShipSelection [] model
-
 
         Tick ->
             noCmd { model | game = Game.update Game.Tick model.game }

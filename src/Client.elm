@@ -7,6 +7,16 @@ import View
 import UI
 
 
+
+-- This is supposed to come from interpolating server and browser animationFrame
+granularity =
+    Time.millisecond * 100
+
+
+
+
+---------------
+
 init =
     UI.init
 
@@ -51,15 +61,13 @@ view model =
 
 
 subscriptions model =
-    Sub.none
-
 --     let
 --         key component shipMessages =
 --             (component shipMessages) |> Player.CommandShip |> PlayerInput
--- 
+
 --     in
---         Sub.batch
---             [ Time.every granularity Tick
+        Sub.batch
+            [ Time.every granularity (always UI.Tick)
 --             , Keyboard.ups <| keyPressDispatcher (key .up) shipControls
 --             , Keyboard.downs <| keyPressDispatcher (key .down) shipControls
---             ]
+            ]
