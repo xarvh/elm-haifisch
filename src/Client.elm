@@ -47,8 +47,12 @@ view model =
 
 
 
+
+
+
 subscriptions model =
     Sub.none
+
 --     let
 --         key component shipMessages =
 --             (component shipMessages) |> Player.CommandShip |> PlayerInput
