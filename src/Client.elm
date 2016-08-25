@@ -14,7 +14,7 @@ update =
     UI.update
 
 view model =
-    View.render model.currentPlayerId model.game
+    View.render model.currentPlayerId model
 
 
 

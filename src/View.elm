@@ -13,7 +13,10 @@ import UI
 
 
 
-drawShip viewerPlayerId ship =
+
+
+
+drawShip viewerPlayerId ui ship =
     let
         size = 0.05
     in
@@ -34,11 +37,11 @@ drawShip viewerPlayerId ship =
 
             , A.style <| String.join "; " <|
                 [ "fill: #088"
-                , "stroke: #055"
+                , "stroke: " ++ if List.member ship.id ui.selectedIds then "#0ff" else "#055"
                 , "stroke-width: " ++ toString size
                 ]
 
-            , E.onClick (UI.PlayerInput Game.ShipMove)
+            , UI.onClickNoBubble (UI.UserClicksShip ship.id)
             ]
             []
 
@@ -73,14 +76,13 @@ outerWellMarker =
 
 
 
-render : Int -> Game.Game -> Html.Html UI.Message
-render viewerPlayerId gameModel =
+render : Int -> UI.Model -> Html.Html UI.Message
+render viewerPlayerId ui =
     let
         id = "starsystem-view"
     in
         Svg.svg
-            [ A.width "100%"
-            , A.height "100%"
+            [ A.height "100vh"
             , A.viewBox "-1 -1 2 2"
             , A.preserveAspectRatio "xMidYMid meet"
 
@@ -88,9 +90,10 @@ render viewerPlayerId gameModel =
 
             , A.id id
             , UI.mouseMoveOn <| "svg#" ++ id
+            , E.onClick UI.UserSelectsNone
             ]
             <| List.concat
                 [ [star]
                 , [outerWellMarker]
-                , List.map (drawShip viewerPlayerId) gameModel.ships
+                , List.map (drawShip viewerPlayerId ui) ui.game.ships
                 ]

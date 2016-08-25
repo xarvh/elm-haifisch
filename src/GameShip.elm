@@ -13,6 +13,11 @@ type alias Ship =
     { id : ShipId
     , empireId: EmpireId
 
+    {- TODO
+    ShipPosition =
+        StarSystem starSystemId x y
+        InFTL starSystemId StarSystemId completion
+    -}
     , position : Vector
     , velocity : Vector
     , angle : Float

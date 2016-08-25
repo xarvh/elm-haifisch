@@ -10,11 +10,19 @@ import Native.SvgMouse
 import Svg
 import Svg.Events
 import Json.Decode as Json exposing ((:=))
-
+import Html.Events
 
 
 
 -- MODEL
+
+
+
+type SelectionType
+    = ShipSelection
+
+
+
 
 
 type alias Model =
@@ -22,18 +30,35 @@ type alias Model =
 
     -- TODO: right now this refers to an **EmpireId**
     , currentPlayerId : Int
+
+    , selectionType : SelectionType
+    , selectedIds : List Int
     }
 
 
 
 init =
-    ( Model Game.init 0, Cmd.none )
+    ( Model Game.init 0 ShipSelection []
+    , Cmd.none
+    )
 
 
 
 
 
--- SUBS
+
+-- SELECTION
+
+select selectionType selectedIds model =
+    { model
+    | selectionType = ShipSelection
+    , selectedIds = selectedIds
+    }
+
+
+
+
+-- Events management
 
 
 mouseMoveOn : String -> Svg.Attribute Message
@@ -50,6 +75,12 @@ mouseMoveOn selector =
 
 
 
+onClickNoBubble tagger =
+    Html.Events.onWithOptions "click" { stopPropagation = True, preventDefault = True } (Json.succeed tagger)
+
+
+
+
 
 
 -- UPDATE
@@ -59,6 +90,8 @@ type Message
     = Noop
     | PlayerInput Game.Command
     | MouseMove { x : Float, y : Float }
+    | UserClicksShip Int
+    | UserSelectsNone
     | Tick
 
 
@@ -84,10 +117,15 @@ update message model =
         -- MessageFromServer message ->
 
         MouseMove {x, y} ->
-            let
-                q = Debug.log "mm" (x, y)
-            in
-                noCmd model
+            noCmd model
+
+
+        UserClicksShip shipId ->
+            noCmd <| select ShipSelection [shipId] model
+
+        UserSelectsNone ->
+            noCmd <| select ShipSelection [] model
+
 
         Tick ->
             noCmd { model | game = Game.update Game.Tick model.game }
