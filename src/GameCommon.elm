@@ -1,7 +1,7 @@
 module GameCommon exposing (..)
 
 
-import Math.Vector2
+import Math.Vector2 as V
 
 
 -- IDs
@@ -17,14 +17,14 @@ type alias ShipId = Id
 
 
 type alias Vector =
-    Math.Vector2.Vec2
+    V.Vec2
 
 vector =
-    Math.Vector2.vec2
+    V.vec2
 
 vectorToString : Vector -> String
 vectorToString v =
-    "(" ++ toString (Math.Vector2.getX v) ++ "," ++ toString (Math.Vector2.getY v) ++ ")"
+    "(" ++ toString (V.getX v) ++ "," ++ toString (V.getY v) ++ ")"
 
 
 -- COMMANDS
@@ -43,4 +43,20 @@ type Command
 starSystemOuterRadius : Float
 starSystemOuterRadius =
     0.96
+
+
+-- GEOMETRY
+
+normalizeBox a b =
+    let
+        ax = V.getX a
+        ay = V.getY a
+        bx = V.getX b
+        by = V.getY b
+    in
+        ( min ax bx
+        , min ay by
+        , max ax bx
+        , max ay by
+        )
 

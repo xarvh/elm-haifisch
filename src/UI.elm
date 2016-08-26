@@ -1,7 +1,14 @@
 module UI exposing (..)
 
 
-import GameCommon exposing (Vector, vector, Command (ShipMove))
+import GameCommon exposing
+    ( Vector
+    , vector
+    , starSystemOuterRadius
+    , normalizeBox
+    , Command (ShipMove)
+    )
+
 import GameEmpire as Empire
 import GameMain as Game
 
@@ -11,6 +18,7 @@ import Svg
 import Svg.Events
 import SvgMouse
 
+import Math.Vector2 as V
 
 
 -- MODEL
@@ -30,6 +38,7 @@ type alias Model =
     { selectionType : SelectionType
     , selectedIds : List Int -- TODO: this should be a set (I assume it would be faster on membership checks?)
 
+    , selectionBox : Maybe Vector
     , starSystemMousePosition : Vector
     }
 
@@ -38,6 +47,7 @@ type alias Model =
 init =
     { selectionType = ShipSelection
     , selectedIds = [1..99]
+    , selectionBox = Nothing
     , starSystemMousePosition = vector 0 0
     }
 
@@ -49,7 +59,34 @@ select selectionType selectedIds model =
     { model
     | selectionType = ShipSelection
     , selectedIds = selectedIds
+    , selectionBox = Nothing
     }
+
+
+selectBox game start end model =
+    let
+        (x, y, x', y') =
+            normalizeBox start end
+
+        fm ship =
+            let
+                sx = V.getX ship.position
+                sy = V.getY ship.position
+            in
+                if sx >= x && sx <= x'
+                && sy >= y && sy <= y'
+              --   && ship.empireId == currentPlayerId
+                then Just ship.id
+                else Nothing
+
+    in
+        { model
+        | selectionType = ShipSelection
+        , selectedIds = List.filterMap fm game.ships
+        , selectionBox = Nothing
+        }
+
+
 
 
 
@@ -90,9 +127,11 @@ onEventCooked eventName tagger =
     Html.Events.onWithOptions eventName { stopPropagation = True, preventDefault = True } <| decodeStarSystemMousePosition tagger
 
 
+onLeftDownCooked =
+    onEventCooked "mousedown"
+
 onLeftClickCooked =
     onEventCooked "click"
-
 
 onRightClickCooked =
     onEventCooked "contextmenu"
@@ -107,9 +146,10 @@ onRightClickCooked =
 
 type Message
     = MouseMove Vector
+    | UserStartsSelectionBox Vector
     | UserClicksShip Int Vector
     | UserIssuesCommand Vector
-    | UserSelectsNone Vector
+    | UserLeftClicks Vector
 
 
 
@@ -117,11 +157,14 @@ noCmd model =
     (model, [])
 
 
-update : Message -> Model -> (Model, List Command)
-update message model =
+update : Game.Game -> Message -> Model -> (Model, List Command)
+update game message model =
     case message of
         MouseMove pos ->
             noCmd { model | starSystemMousePosition = pos }
+
+        UserStartsSelectionBox pos ->
+            noCmd { model | selectionBox = Just pos }
 
         UserClicksShip shipId pos ->
             noCmd <| select ShipSelection [shipId] model
@@ -129,5 +172,9 @@ update message model =
         UserIssuesCommand pos ->
             command pos model
 
-        UserSelectsNone pos ->
-            noCmd <| select ShipSelection [] model
+        UserLeftClicks endPosition ->
+            noCmd <| case model.selectionBox of
+                Nothing -> select ShipSelection [] model
+                Just startPosition ->
+                    selectBox game startPosition endPosition model
+

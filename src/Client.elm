@@ -127,7 +127,7 @@ update msg model =
         UiMessage uiMessage ->
             let
                 ( newUiModel, commands ) =
-                    UI.update uiMessage model.ui
+                    UI.update model.game uiMessage model.ui
 
                 cmd =
                     if List.length commands == 0

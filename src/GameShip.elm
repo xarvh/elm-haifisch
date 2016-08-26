@@ -31,6 +31,7 @@ type alias Ship =
 shipRateOfTurning =
     turns 0.02
 
+
 shipThrust =
     starSystemOuterRadius / 100
 
@@ -40,13 +41,11 @@ idleBehavior ship =
 
 
 normalizeAngle a =
-    let
-        -- TODO: gross. Isn't there a better way?
-        a' = if a < -pi then a + 2 * pi else a
-        a'' = if a' > pi then a' - 2 * pi else a'
-    in
-        a''
-
+    if a < -pi
+    then a + 2 * pi
+    else if a > pi
+        then a - 2 * pi
+        else a
 
 
 thrustBehavior targetPosition ship =

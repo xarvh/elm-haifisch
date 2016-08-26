@@ -3,13 +3,14 @@ module View exposing (render)
 
 
 import GameMain as Game
-import GameCommon exposing (starSystemOuterRadius, vectorToString)
+import GameCommon exposing (starSystemOuterRadius, vectorToString, normalizeBox)
 import Html
 import String
 import Svg
 import Svg.Events as E
 import Svg.Attributes as A
 import UI
+import Math.Vector2 as V
 
 
 
@@ -18,7 +19,11 @@ import UI
 
 drawShip viewerPlayerId ui ship =
     let
-        size = 0.05
+        size =
+            0.05
+
+        isSelected =
+            List.member ship.id ui.selectedIds
     in
         Svg.path
             [   A.transform <| String.join " " <|
@@ -37,8 +42,8 @@ drawShip viewerPlayerId ui ship =
 
             , A.style <| String.join "; " <|
                 [ "fill: #088"
-                , "stroke: " ++ if List.member ship.id ui.selectedIds then "#0ff" else "#055"
-                , "stroke-width: " ++ toString size
+                , "stroke: " ++ if isSelected then "#0f0" else "#055"
+                , "stroke-width: " ++ toString (if isSelected then size * 3 else size)
                 ]
 
             , UI.onLeftClickCooked (UI.UserClicksShip ship.id)
@@ -73,6 +78,31 @@ outerWellMarker =
 
 
 
+selectionBox ui =
+    case ui.selectionBox of
+        Nothing -> []
+        Just startPosition ->
+            let
+                (x, y, x', y') = normalizeBox startPosition ui.starSystemMousePosition
+                w = x' - x
+                h = y' - y
+
+                rect = Svg.rect
+                    [ A.x <| toString x
+                    , A.y <| toString y
+                    , A.width <| toString w
+                    , A.height <| toString h
+
+                    , A.fill "#090"
+                    , A.fillOpacity "0.2"
+                    , A.stroke "#0d0"
+                    , A.strokeWidth "0.005"
+                    ]
+                    []
+            in
+                [ rect ]
+
+
 
 
 
@@ -87,12 +117,13 @@ render viewerPlayerId game ui =
 
         , A.id UI.starSystemSvgId
         , UI.onMouseMove UI.MouseMove
-        , UI.onLeftClickCooked UI.UserSelectsNone
-
+        , UI.onLeftDownCooked UI.UserStartsSelectionBox
+        , UI.onLeftClickCooked UI.UserLeftClicks
         , UI.onRightClickCooked UI.UserIssuesCommand
         ]
         <| List.concat
             [ [star]
             , [outerWellMarker]
+            , selectionBox ui
             , List.map (drawShip viewerPlayerId ui) game.ships
             ]
