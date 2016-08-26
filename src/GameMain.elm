@@ -1,7 +1,7 @@
 module GameMain exposing (..)
 
 
-import GameCommon exposing (..)
+import GameCommon exposing (Id, EmpireId, ShipId, Vector, vector, Command (..))
 
 import GameShip as Ship exposing (Ship)
 import GameEmpire as Empire
@@ -28,8 +28,6 @@ type Message
 
 
 
-type Command
-    = ShipMove
 
 
 
@@ -43,7 +41,7 @@ size = 1
 addShip : Game -> Game
 addShip game =
     let
-        ship = Ship game.nextId 0 { x = size/2, y = size/2} { x = 0, y = 0 } 0 []
+        ship = Ship game.nextId 0 (vector (size/2) (size/2)) (vector 0 0) 0 []
     in
         { game
         | nextId = game.nextId + 1

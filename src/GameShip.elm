@@ -1,7 +1,7 @@
 module GameShip exposing (..)
 
 
-import GameCommon exposing (..)
+import GameCommon exposing (EmpireId, ShipId, Vector, vector)
 
 
 

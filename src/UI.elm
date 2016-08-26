@@ -1,7 +1,7 @@
 module UI exposing (..)
 
 
-import GameCommon exposing (Pos, pos)
+import GameCommon exposing (Vector, vector, Command (ShipMove))
 import GameEmpire as Empire
 import GameMain as Game
 
@@ -25,31 +25,21 @@ type SelectionType
 
 
 type alias Model =
-    { game : Game.Game
-
     -- TODO: right now this refers to an **EmpireId**
-    , currentPlayerId : Int
 
-    , selectionType : SelectionType
-    , selectedIds : List Int
+    { selectionType : SelectionType
+    , selectedIds : List Int -- TODO: this should be a set (I assume it would be faster on membership checks?)
 
-    , starSystemMousePosition : Pos
+    , starSystemMousePosition : Vector
     }
 
 
 
 init =
-    let
-        model =
-            { game = Game.init
-            , currentPlayerId = 0
-            , selectionType = ShipSelection
-            , selectedIds = []
-            , starSystemMousePosition = pos 0 0
-            }
-    in
-        ( model, Cmd.none )
-
+    { selectionType = ShipSelection
+    , selectedIds = []
+    , starSystemMousePosition = vector 0 0
+    }
 
 
 
@@ -64,6 +54,13 @@ select selectionType selectedIds model =
 
 
 
+-- COMMAND
+
+command pos model =
+    ( model, [ShipMove model.selectedIds pos] )
+
+
+
 -- Mouse management
 
 
@@ -73,11 +70,11 @@ starSystemSvgId =
 
 decodeStarSystemMousePosition tagger =
     let
-        toPos (x, y) =
-            pos x y
+        toVector (x, y) =
+            vector x y
 
         mapper clientX clientY =
-            tagger <| toPos <| SvgMouse.transform ("svg#" ++ starSystemSvgId) clientX clientY
+            tagger <| toVector <| SvgMouse.transform ("svg#" ++ starSystemSvgId) clientX clientY
     in
         Json.object2 mapper ("clientX" := Json.int) ("clientY" := Json.int)
 
@@ -109,36 +106,20 @@ onRightClickCooked =
 
 
 type Message
-    = Noop
---     | PlayerInput Game.Command
-    | MouseMove Pos
-    | UserClicksShip Int Pos
-    | UserIssuesCommand Pos
-    | UserSelectsNone Pos
-    | Tick
+    = MouseMove Vector
+    | UserClicksShip Int Vector
+    | UserIssuesCommand Vector
+    | UserSelectsNone Vector
 
 
 
 noCmd model =
-    (model, Cmd.none)
+    (model, [])
 
 
-update : Message -> Model -> (Model, Cmd Message)
+update : Message -> Model -> (Model, List Command)
 update message model =
     case message of
-        Noop ->
-            noCmd model
-
---         PlayerInput empireCommand ->
---             let
---                 x = Debug.log "c" empireCommand
---             -- TODO: do not execute the command here, but send it to the server
---             in
---                 noCmd { model | game = Game.update (Game.EmpireCommands model.currentPlayerId empireCommand) model.game }
-
-        -- TODO
-        -- MessageFromServer message ->
-
         MouseMove pos ->
             noCmd { model | starSystemMousePosition = pos }
 
@@ -146,10 +127,7 @@ update message model =
             noCmd <| select ShipSelection [shipId] model
 
         UserIssuesCommand pos ->
-                noCmd model
+            command pos model
 
         UserSelectsNone pos ->
             noCmd <| select ShipSelection [] model
-
-        Tick ->
-            noCmd { model | game = Game.update Game.Tick model.game }

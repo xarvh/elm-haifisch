@@ -2,9 +2,17 @@ module Client exposing (..)
 
 
 import Keyboard
+import Process
+import Task
 import Time
 import View
+import Html.App
+
+
+import GameCommon exposing (Command, EmpireId)
+import GameMain
 import UI
+
 
 
 
@@ -17,57 +25,126 @@ granularity =
 
 ---------------
 
-init =
-    UI.init
 
-update =
-    UI.update
+type alias Model =
+    { game : GameMain.Game
+    , ui : UI.Model
+    , currentPlayerId : EmpireId
+    }
+
+
+
+init =
+    ( Model GameMain.init UI.init 0
+    , Cmd.none
+    )
+
+
+
+
+type ServerMessage =
+    GameCommand EmpireId Command
+
+
+
+
+
+
+
+
+type Message
+    = Noop
+    | Tick
+    | UiMessage UI.Message
+    | ReceiveFromServer ServerMessage
+
+
+
+
+
+
+
+
+{- TODO
+    For now, just reroute straight back all commands, adding some lag
+-}
+sendToServer : List Command -> Cmd Message
+sendToServer commands =
+    let
+        playerId =
+            0
+
+        tagger command _ =
+            ReceiveFromServer <| GameCommand playerId command
+
+        task =
+            Process.sleep <| Time.millisecond * 100
+
+        commandToCmd command =
+            Task.perform (tagger command) (tagger command) task
+
+    in
+        Cmd.batch <| List.map commandToCmd commands
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+noCmd model =
+    ( model, Cmd.none )
+
+
+
+updateGame command model =
+    noCmd <| { model | game = GameMain.update command model.game }
+
+
+
+update msg model =
+    case msg of
+
+        Noop ->
+            noCmd model
+
+        Tick ->
+            updateGame GameMain.Tick model
+
+
+        ReceiveFromServer serverMessage ->
+            case serverMessage of
+                GameCommand empireId command ->
+                    updateGame (GameMain.EmpireCommands empireId command) model
+
+        UiMessage uiMessage ->
+            let
+                ( newUiModel, commands ) =
+                    UI.update uiMessage model.ui
+
+                cmd =
+                    if List.length commands == 0
+                    then Cmd.none
+                    else sendToServer commands
+            in
+                ( { model | ui = newUiModel }, cmd )
+
+
+
 
 view model =
-    View.render model.currentPlayerId model
-
-
-
-
-
-
--- shipControls =
---     [   { down = Ship.Turn (Just Ship.Clockwise)
---         , up = Ship.Turn Nothing
---         , keyCodes = [13, 39, 76, 68] -- Enter, Arrow Right, l, d
---         }
---     ,   { down = Ship.Turn (Just Ship.CounterClockwise)
---         , up = Ship.Turn Nothing
---         , keyCodes = [37, 72, 65] -- Arrow Left, h, a
---         }
---     ,   { down = Ship.Thrust True
---         , up = Ship.Thrust False
---         , keyCodes = [32] -- Spacebar
---         }
---     ]
-
-
-
-
-
--- keyPressDispatcher what keyCodeMap keyCode =
---     case keyCodeMap of
---         x :: xs -> if List.member keyCode x.keyCodes then what x else keyPressDispatcher what xs keyCode
---         _ -> Noop --let x = Debug.log "keyCode" keyCode in Noop
-
-
-
+    Html.App.map UiMessage <| View.render model.currentPlayerId model.game model.ui
 
 
 
 subscriptions model =
---     let
---         key component shipMessages =
---             (component shipMessages) |> Player.CommandShip |> PlayerInput
-
---     in
         Sub.batch
-            [ Time.every granularity (always UI.Tick)
---             , Keyboard.ups <| keyPressDispatcher (key .up) shipControls
---             , Keyboard.downs <| keyPressDispatcher (key .down) shipControls
+            [ Time.every granularity (always Tick)
             ]

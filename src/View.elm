@@ -3,7 +3,7 @@ module View exposing (render)
 
 
 import GameMain as Game
-import GameCommon exposing (starSystemOuterRadius)
+import GameCommon exposing (starSystemOuterRadius, vectorToString)
 import Html
 import String
 import Svg
@@ -22,7 +22,7 @@ drawShip viewerPlayerId ui ship =
     in
         Svg.path
             [   A.transform <| String.join " " <|
-                    [ "translate(" ++ toString ship.position.x ++ "," ++ toString ship.position.y ++ ")"
+                    [ "translate" ++ vectorToString ship.position
                     , "scale(" ++ toString size ++ ")"
                     , "rotate(" ++ toString (ship.angle / degrees 1) ++ ")"
                     ]
@@ -76,8 +76,8 @@ outerWellMarker =
 
 
 
-render : Int -> UI.Model -> Html.Html UI.Message
-render viewerPlayerId ui =
+render : Int -> Game.Game -> UI.Model -> Html.Html UI.Message
+render viewerPlayerId game ui =
     Svg.svg
         [ A.height "100vh"
         , A.viewBox "-1 -1 2 2"
@@ -94,5 +94,5 @@ render viewerPlayerId ui =
         <| List.concat
             [ [star]
             , [outerWellMarker]
-            , List.map (drawShip viewerPlayerId ui) ui.game.ships
+            , List.map (drawShip viewerPlayerId ui) game.ships
             ]
