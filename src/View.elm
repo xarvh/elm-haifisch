@@ -41,7 +41,7 @@ drawShip viewerPlayerId ui ship =
                 , "stroke-width: " ++ toString size
                 ]
 
-            , UI.onClickNoBubble (UI.UserClicksShip ship.id)
+            , UI.onLeftClickCooked (UI.UserClicksShip ship.id)
             ]
             []
 
@@ -90,7 +90,9 @@ render viewerPlayerId ui =
 
             , A.id id
             , UI.mouseMoveOn <| "svg#" ++ id
-            , E.onClick UI.UserSelectsNone
+            , UI.onLeftClickCooked UI.UserSelectsNone
+
+            , UI.onRightClickCooked UI.UserIssuesCommand
             ]
             <| List.concat
                 [ [star]

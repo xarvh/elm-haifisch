@@ -74,8 +74,15 @@ mouseMoveOn selector =
 
 
 
-onClickNoBubble tagger =
-    Html.Events.onWithOptions "click" { stopPropagation = True, preventDefault = True } (Json.succeed tagger)
+
+onEventCooked eventName tagger =
+    Html.Events.onWithOptions eventName { stopPropagation = True, preventDefault = True } (Json.succeed tagger)
+
+onLeftClickCooked =
+    onEventCooked "click"
+
+onRightClickCooked =
+    onEventCooked "contextmenu"
 
 
 
@@ -90,6 +97,7 @@ type Message
 --     | PlayerInput Game.Command
     | MouseMove (Float, Float)
     | UserClicksShip Int
+    | UserIssuesCommand
     | UserSelectsNone
     | Tick
 
@@ -120,6 +128,12 @@ update message model =
 
         UserClicksShip shipId ->
             noCmd <| select ShipSelection [shipId] model
+
+        UserIssuesCommand ->
+            let
+                q = Debug.log "qq" "Command!"
+            in
+                noCmd model
 
         UserSelectsNone ->
             noCmd <| select ShipSelection [] model
