@@ -35,15 +35,22 @@ shipThrust =
     starSystemOuterRadius / 100
 
 
-
-
 idleBehavior ship =
     ship
 
 
+normalizeAngle a =
+    let
+        -- TODO: gross. Isn't there a better way?
+        a' = if a < -pi then a + 2 * pi else a
+        a'' = if a' > pi then a' - 2 * pi else a'
+    in
+        a''
+
+
 
 thrustBehavior targetPosition ship =
-    -- TODO: check that ship can actually move
+    -- TODO: check that ship can actually move (for ex, it is NOT in FTL)
     let
         difference =
             V.sub targetPosition ship.position
@@ -57,10 +64,14 @@ thrustBehavior targetPosition ship =
             else atan2 (V.getY difference) (V.getX difference)
 
         deltaAngle =
-            clamp -shipRateOfTurning shipRateOfTurning (targetAngle - ship.angle)
+            (targetAngle - ship.angle)
+
+        clampedDeltaAngle =
+            clamp -shipRateOfTurning shipRateOfTurning (normalizeAngle deltaAngle)
+
 
         newAngle =
-            ship.angle + deltaAngle
+            ship.angle + clampedDeltaAngle
 
         speed =
             min distance shipThrust

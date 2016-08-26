@@ -37,7 +37,7 @@ type alias Model =
 
 init =
     { selectionType = ShipSelection
-    , selectedIds = []
+    , selectedIds = [1..99]
     , starSystemMousePosition = vector 0 0
     }
 
