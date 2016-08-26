@@ -1,7 +1,7 @@
 #!/bin/sh
 
-ADD=index.html
-BUILD="elm-make src/main.elm"
+ADD=build/*
+BUILD="npm run build"
 
 
 CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD`

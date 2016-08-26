@@ -75,9 +75,8 @@ update message model =
             case command of
                 ShipMove shipIds position ->
                     let
-                        -- TODO: should probably run some checks?
                         mapShip ship =
-                            if ship.empireId /= empireId
+                            if ship.empireId /= empireId || not (List.member ship.id shipIds)
                             then ship
                             else { ship | commands = [Ship.ThrustTo position] }
                     in
