@@ -1,12 +1,20 @@
 module GameCommon exposing (..)
 
 
+import Math.Vector2
 
 
 type alias Id = Int
 type alias EmpireId = Id
 type alias ShipId = Id
 
+
+
+type alias Pos =
+    Math.Vector2.Vec2
+
+pos =
+    Math.Vector2.vec2
 
 
 

@@ -78,24 +78,21 @@ outerWellMarker =
 
 render : Int -> UI.Model -> Html.Html UI.Message
 render viewerPlayerId ui =
-    let
-        id = "starsystem-view"
-    in
-        Svg.svg
-            [ A.height "100vh"
-            , A.viewBox "-1 -1 2 2"
-            , A.preserveAspectRatio "xMidYMid meet"
+    Svg.svg
+        [ A.height "100vh"
+        , A.viewBox "-1 -1 2 2"
+        , A.preserveAspectRatio "xMidYMid meet"
 
-            , A.style "border: 1px solid #333333;"
+        , A.style "border: 1px solid #333333;"
 
-            , A.id id
-            , UI.mouseMoveOn <| "svg#" ++ id
-            , UI.onLeftClickCooked UI.UserSelectsNone
+        , A.id UI.starSystemSvgId
+        , UI.onMouseMove UI.MouseMove
+        , UI.onLeftClickCooked UI.UserSelectsNone
 
-            , UI.onRightClickCooked UI.UserIssuesCommand
+        , UI.onRightClickCooked UI.UserIssuesCommand
+        ]
+        <| List.concat
+            [ [star]
+            , [outerWellMarker]
+            , List.map (drawShip viewerPlayerId ui) ui.game.ships
             ]
-            <| List.concat
-                [ [star]
-                , [outerWellMarker]
-                , List.map (drawShip viewerPlayerId ui) ui.game.ships
-                ]

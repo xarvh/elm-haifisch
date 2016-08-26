@@ -1,7 +1,7 @@
 module UI exposing (..)
 
 
--- import GameCommon exposing (Pos)
+import GameCommon exposing (Pos, pos)
 import GameEmpire as Empire
 import GameMain as Game
 
@@ -32,16 +32,23 @@ type alias Model =
 
     , selectionType : SelectionType
     , selectedIds : List Int
+
+    , starSystemMousePosition : Pos
     }
 
 
 
 init =
-    ( Model Game.init 0 ShipSelection []
-    , Cmd.none
-    )
-
-
+    let
+        model =
+            { game = Game.init
+            , currentPlayerId = 0
+            , selectionType = ShipSelection
+            , selectedIds = []
+            , starSystemMousePosition = pos 0 0
+            }
+    in
+        ( model, Cmd.none )
 
 
 
@@ -57,29 +64,38 @@ select selectionType selectedIds model =
 
 
 
--- Events management
+-- Mouse management
 
 
-mouseMoveOn : String -> Svg.Attribute Message
-mouseMoveOn selector =
+starSystemSvgId =
+    "starsystem-view"
+
+
+decodeStarSystemMousePosition tagger =
     let
-        dispatcher clientX clientY =
-            MouseMove <| SvgMouse.transform selector clientX clientY
+        toPos (x, y) =
+            pos x y
 
-        position =
-            Json.object2 dispatcher ("clientX" := Json.int) ("clientY" := Json.int)
-
+        mapper clientX clientY =
+            tagger <| toPos <| SvgMouse.transform ("svg#" ++ starSystemSvgId) clientX clientY
     in
-        Svg.Events.on "mousemove" position
+        Json.object2 mapper ("clientX" := Json.int) ("clientY" := Json.int)
 
 
+
+
+
+onMouseMove tagger =
+    Svg.Events.on "mousemove" <| decodeStarSystemMousePosition tagger
 
 
 onEventCooked eventName tagger =
-    Html.Events.onWithOptions eventName { stopPropagation = True, preventDefault = True } (Json.succeed tagger)
+    Html.Events.onWithOptions eventName { stopPropagation = True, preventDefault = True } <| decodeStarSystemMousePosition tagger
+
 
 onLeftClickCooked =
     onEventCooked "click"
+
 
 onRightClickCooked =
     onEventCooked "contextmenu"
@@ -95,10 +111,10 @@ onRightClickCooked =
 type Message
     = Noop
 --     | PlayerInput Game.Command
-    | MouseMove (Float, Float)
-    | UserClicksShip Int
-    | UserIssuesCommand
-    | UserSelectsNone
+    | MouseMove Pos
+    | UserClicksShip Int Pos
+    | UserIssuesCommand Pos
+    | UserSelectsNone Pos
     | Tick
 
 
@@ -123,19 +139,16 @@ update message model =
         -- TODO
         -- MessageFromServer message ->
 
-        MouseMove ( x, y ) ->
-            noCmd model
+        MouseMove pos ->
+            noCmd { model | starSystemMousePosition = pos }
 
-        UserClicksShip shipId ->
+        UserClicksShip shipId pos ->
             noCmd <| select ShipSelection [shipId] model
 
-        UserIssuesCommand ->
-            let
-                q = Debug.log "qq" "Command!"
-            in
+        UserIssuesCommand pos ->
                 noCmd model
 
-        UserSelectsNone ->
+        UserSelectsNone pos ->
             noCmd <| select ShipSelection [] model
 
         Tick ->
