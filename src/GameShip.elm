@@ -1,12 +1,13 @@
 module GameShip exposing (..)
 
 
-import GameCommon exposing (EmpireId, ShipId, Vector, vector)
+import GameCommon exposing (EmpireId, ShipId, Vector, vector, starSystemOuterRadius)
+import Math.Vector2 as V
 
 
 
 type ShipCommand
-    = Goto Int Int
+    = ThrustTo Vector
 
 
 type alias Ship =
@@ -19,7 +20,6 @@ type alias Ship =
         InFTL starSystemId StarSystemId completion
     -}
     , position : Vector
-    , velocity : Vector
     , angle : Float
 
     , commands : List ShipCommand
@@ -28,58 +28,60 @@ type alias Ship =
 
 
 
+shipRateOfTurning =
+    turns 0.02
+
+shipThrust =
+    starSystemOuterRadius / 100
 
 
--- init =
---     Ship { x = size/2, y = size/2} { x = 0, y = 0 } 0 False Nothing
+
+
+idleBehavior ship =
+    ship
 
 
 
--- wrap size value =
---    value - (toFloat <| floor <| value / size) * size
--- 
--- 
--- updatePositionByComponent deltaTime model component =
---     wrap size <| component model.position + component model.velocity * deltaTime
--- 
--- 
--- updateVelocityByComponent deltaTime thrust model component =
---     clamp (-maxVelocity) maxVelocity <| component model.velocity + component thrust * deltaTime
+thrustBehavior targetPosition ship =
+    -- TODO: check that ship can actually move
+    let
+        difference =
+            V.sub targetPosition ship.position
+
+        distance =
+            V.length difference
+
+        targetAngle =
+            if distance < starSystemOuterRadius / 1000
+            then ship.angle
+            else atan2 (V.getY difference) (V.getX difference)
+
+        deltaAngle =
+            clamp -shipRateOfTurning shipRateOfTurning (targetAngle - ship.angle)
+
+        newAngle =
+            ship.angle + deltaAngle
+
+        speed =
+            min distance shipThrust
+
+        velocity =
+            V.vec2 (speed * cos newAngle) (speed * sin newAngle)
+
+        newPosition =
+            V.add ship.position velocity
+    in
+        { ship
+        | angle = newAngle
+        , position = newPosition
+        }
 
 
 
 tick : Ship -> Ship
 tick ship =
-    ship
---     let
---         pos =
---             updatePositionByComponent dt model
--- 
---         newPosition =
---             { x = pos .x, y = pos .y }
--- 
---         thrust =
---             if model.commandThrust
---             then { x = shipThrust * cos model.angle, y = shipThrust * sin model.angle }
---             else { x = 0, y = 0 }
--- 
---         vel =
---             updateVelocityByComponent dt thrust model
--- 
---         newVelocity =
---             { x = vel .x, y = vel .y }
--- 
---         newAngle =
---             case model.commandTurn of
---                 Nothing -> model.angle
---                 Just direction ->
---                     wrap (turns 1) <| model.angle + shipTurnRate * dt * case direction of
---                         Clockwise -> -1
---                         CounterClockwise -> 1
---     in
---         { model
---         | position = newPosition
---         , velocity = newVelocity
---         , angle = newAngle
---         }
-
+    case List.head ship.commands of
+        Nothing -> idleBehavior ship
+        Just command ->
+            case command of
+                ThrustTo position -> thrustBehavior position ship

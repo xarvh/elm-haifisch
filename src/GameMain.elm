@@ -1,7 +1,7 @@
 module GameMain exposing (..)
 
 
-import GameCommon exposing (Id, EmpireId, ShipId, Vector, vector, Command (..))
+import GameCommon exposing (Id, EmpireId, ShipId, Vector, vector, Command (ShipMove))
 
 import GameShip as Ship exposing (Ship)
 import GameEmpire as Empire
@@ -41,7 +41,7 @@ size = 1
 addShip : Game -> Game
 addShip game =
     let
-        ship = Ship game.nextId 0 (vector (size/2) (size/2)) (vector 0 0) 0 []
+        ship = Ship game.nextId 0 (vector (size/2) (size/2)) 0 []
     in
         { game
         | nextId = game.nextId + 1
@@ -72,5 +72,14 @@ update message model =
             tick model
 
         EmpireCommands empireId command ->
-            model
+            case command of
+                ShipMove shipIds position ->
+                    let
+                        -- TODO: should probably run some checks?
+                        mapShip ship =
+                            if ship.empireId /= empireId
+                            then ship
+                            else { ship | commands = [Ship.ThrustTo position] }
+                    in
+                        { model | ships = List.map mapShip model.ships }
 
