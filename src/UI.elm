@@ -21,14 +21,23 @@ import SvgMouse
 import Math.Vector2 as V
 
 
--- MODEL
 
+-- MODEL
 
 
 type SelectionType
     = ShipSelection
 
 
+type MouseButtonIndex
+    = MouseLeft
+    | MouseRight
+    | MouseMid
+
+
+type MouseButtonMovement
+    = MousePress
+    | MouseRelease
 
 
 
@@ -98,58 +107,34 @@ command pos model =
 
 
 
--- Mouse management
+-- STAR SYSTEM MOUSE MANAGER
 
 
 starSystemSvgId =
     "starsystem-view"
 
 
-decodeStarSystemMousePosition tagger =
+decodeStarSystemMouse tagger =
     let
         toVector (x, y) =
             vector x y
 
-        mapper clientX clientY =
-            tagger <| toVector <| SvgMouse.transform ("svg#" ++ starSystemSvgId) clientX clientY
+        decodeMouseButtons which button =
+            if which == 1 || button == 0
+            then MouseLeft
+            else if which == 3 || button == 2
+                then MouseRight
+                else MouseMid
+
+        mapper clientX clientY which button =
+            tagger (decodeMouseButtons which button) <| toVector <| SvgMouse.transform ("svg#" ++ starSystemSvgId) clientX clientY
     in
-        Json.object2 mapper ("clientX" := Json.int) ("clientY" := Json.int)
-
-
-
-
-
-onMouseMove tagger =
-    Svg.Events.on "mousemove" <| decodeStarSystemMousePosition tagger
+        Json.object4 mapper ("clientX" := Json.int) ("clientY" := Json.int) ("which" := Json.int) ("button" := Json.int)
 
 
 onEventCooked eventName tagger =
-    Html.Events.onWithOptions eventName { stopPropagation = True, preventDefault = True } <| decodeStarSystemMousePosition tagger
+    Html.Events.onWithOptions eventName { stopPropagation = True, preventDefault = True } <| decodeStarSystemMouse tagger
 
-
-onLeftDownCooked =
-    onEventCooked "mousedown"
-
-onLeftClickCooked =
-    onEventCooked "click"
-
-onRightClickCooked =
-    onEventCooked "contextmenu"
-
-
-
-
-
-
--- UPDATE
-
-
-type Message
-    = MouseMove Vector
-    | UserStartsSelectionBox Vector
-    | UserClicksShip Int Vector
-    | UserIssuesCommand Vector
-    | UserLeftClicks Vector
 
 
 
@@ -157,24 +142,63 @@ noCmd model =
     (model, [])
 
 
+manageStarSystemMouse game mouseButton mouseButtonDirection pos model =
+    case mouseButton of
+
+        -- Mid mouse is not used
+        MouseMid ->
+            noCmd model
+
+        -- Start / finish selection box
+        MouseLeft ->
+            case mouseButtonDirection of
+                MousePress ->
+                    noCmd { model | selectionBox = Just pos }
+
+                MouseRelease ->
+                    noCmd <| case model.selectionBox of
+                        Nothing -> select ShipSelection [] model
+                        Just startPosition ->
+                            selectBox game startPosition pos model
+
+        -- Issue command on click
+        MouseRight ->
+            case mouseButtonDirection of
+                MousePress ->
+                    noCmd model
+
+                MouseRelease ->
+                    command pos model
+
+
+
+-- UPDATE
+
+
+type Message
+    = StarSystemMouseMove MouseButtonIndex Vector
+    | StarSystemMousePress MouseButtonIndex Vector
+    | StarSystemMouseRelease MouseButtonIndex Vector
+
+    | UserClicksShip Int MouseButtonIndex Vector
+
+
+
+
 update : Game.Game -> Message -> Model -> (Model, List Command)
 update game message model =
     case message of
-        MouseMove pos ->
+
+        StarSystemMouseMove button pos ->
             noCmd { model | starSystemMousePosition = pos }
 
-        UserStartsSelectionBox pos ->
-            noCmd { model | selectionBox = Just pos }
+        StarSystemMousePress button pos ->
+            manageStarSystemMouse game button MousePress pos model
 
-        UserClicksShip shipId pos ->
+        StarSystemMouseRelease button pos ->
+            manageStarSystemMouse game button MouseRelease pos model
+
+
+        UserClicksShip shipId button pos ->
+            let q = Debug.log "swl" shipId in
             noCmd <| select ShipSelection [shipId] model
-
-        UserIssuesCommand pos ->
-            command pos model
-
-        UserLeftClicks endPosition ->
-            noCmd <| case model.selectionBox of
-                Nothing -> select ShipSelection [] model
-                Just startPosition ->
-                    selectBox game startPosition endPosition model
-

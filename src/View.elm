@@ -46,7 +46,8 @@ drawShip viewerPlayerId ui ship =
                 , "stroke-width: " ++ toString (if isSelected then size * 3 else size)
                 ]
 
-            , UI.onLeftClickCooked (UI.UserClicksShip ship.id)
+            , UI.onEventCooked "mousedown" UI.StarSystemMouseMove
+            , UI.onEventCooked "mouseup" (UI.UserClicksShip ship.id)
             ]
             []
 
@@ -116,10 +117,10 @@ render viewerPlayerId game ui =
         , A.style "border: 1px solid #333333;"
 
         , A.id UI.starSystemSvgId
-        , UI.onMouseMove UI.MouseMove
-        , UI.onLeftDownCooked UI.UserStartsSelectionBox
-        , UI.onLeftClickCooked UI.UserLeftClicks
-        , UI.onRightClickCooked UI.UserIssuesCommand
+        , UI.onEventCooked "mousemove" UI.StarSystemMouseMove
+        , UI.onEventCooked "contextmenu" UI.StarSystemMouseMove
+        , UI.onEventCooked "mousedown" UI.StarSystemMousePress
+        , UI.onEventCooked "mouseup" UI.StarSystemMouseRelease
         ]
         <| List.concat
             [ [star]
