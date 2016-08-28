@@ -149,18 +149,6 @@ manageStarSystemMouse game mouseButton mouseButtonDirection pos model =
         MouseMid ->
             noCmd model
 
-        -- Start / finish selection box
-        MouseLeft ->
-            case mouseButtonDirection of
-                MousePress ->
-                    noCmd { model | selectionBox = Just pos }
-
-                MouseRelease ->
-                    noCmd <| case model.selectionBox of
-                        Nothing -> select ShipSelection [] model
-                        Just startPosition ->
-                            selectBox game startPosition pos model
-
         -- Issue command on click
         MouseRight ->
             case mouseButtonDirection of
@@ -169,6 +157,27 @@ manageStarSystemMouse game mouseButton mouseButtonDirection pos model =
 
                 MouseRelease ->
                     command pos model
+
+        -- Start / finish selection box
+        MouseLeft ->
+            noCmd <| case mouseButtonDirection of
+
+                MousePress ->
+                    case model.selectionBox of
+                        Nothing ->
+                            { model | selectionBox = Just pos }
+
+                        -- if for some reason a marking box is already active, do not reset it
+                        Just startPosition ->
+                            model
+
+                MouseRelease ->
+                    case model.selectionBox of
+                        Nothing ->
+                            select ShipSelection [] model
+                        Just startPosition ->
+                            selectBox game startPosition pos model
+
 
 
 
@@ -198,7 +207,5 @@ update game message model =
         StarSystemMouseRelease button pos ->
             manageStarSystemMouse game button MouseRelease pos model
 
-
         UserClicksShip shipId button pos ->
-            let q = Debug.log "swl" shipId in
             noCmd <| select ShipSelection [shipId] model

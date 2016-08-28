@@ -30,18 +30,11 @@ type Message
 
 
 
-
-
-size = 1
-
-
-
-
 -- FUNCTIONS
-addShip : Game -> Game
-addShip game =
+addShip : Float -> Float -> Game -> Game
+addShip x y game =
     let
-        ship = Ship game.nextId 0 (vector (size/2) (size/2)) 0 []
+        ship = Ship game.nextId 0 (vector x y) 0 []
     in
         { game
         | nextId = game.nextId + 1
@@ -53,7 +46,10 @@ addShip game =
 
 
 init =
-    addShip <| Game 1 [] [] 0
+    Game 1 [] [] 0
+    |> addShip (1/2) (1/2)
+    |> addShip (1/3) (1/3)
+    |> addShip (1/2) (1/3)
 
 
 
