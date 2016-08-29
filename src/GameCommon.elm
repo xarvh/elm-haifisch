@@ -31,12 +31,18 @@ vectorToString v =
 
 
 type QueueMode
-    = AddToExistingCommandQueue
-    | CancelExistingCommandQueue
+    = Append
+    | Replace
+
+
+
+type ShipCommand
+    = ThrustTo Vector
+
 
 
 type Command
-    = ShipMove (List ShipId) Vector
+    = ShipCommand (List ShipId) QueueMode ShipCommand
 
 
 -- This is the max distance a ship can be from a star outside FTL

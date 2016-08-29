@@ -1,12 +1,12 @@
 module UI exposing (..)
 
 
-import GameCommon exposing
+import GameCommon as G exposing
     ( Vector
     , vector
     , starSystemOuterRadius
     , normalizeBox
-    , Command (ShipMove)
+    , Command
     )
 
 import GameEmpire as Empire
@@ -110,7 +110,7 @@ selectBox game start end model =
 -- COMMAND
 
 command pos model =
-    ( model, [ShipMove model.selectedIds pos] )
+    ( model, [G.ShipCommand model.selectedIds G.Replace <| G.ThrustTo pos] )
 
 
 

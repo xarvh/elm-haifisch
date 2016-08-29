@@ -6,10 +6,6 @@ import Math.Vector2 as V
 
 
 
-type ShipCommand
-    = ThrustTo Vector
-
-
 type alias Ship =
     { id : ShipId
     , empireId: EmpireId
@@ -22,7 +18,7 @@ type alias Ship =
     , position : Vector
     , angle : Float
 
-    , commands : List ShipCommand
+    , commands : List GameCommon.ShipCommand
     }
 
 
@@ -91,7 +87,10 @@ thrustBehavior targetPosition ship =
 tick : Ship -> Ship
 tick ship =
     case List.head ship.commands of
-        Nothing -> idleBehavior ship
+
+        Nothing ->
+            idleBehavior ship
+
         Just command ->
             case command of
-                ThrustTo position -> thrustBehavior position ship
+                GameCommon.ThrustTo position -> thrustBehavior position ship
