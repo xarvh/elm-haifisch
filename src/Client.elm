@@ -147,4 +147,5 @@ view model =
 subscriptions model =
         Sub.batch
             [ Time.every granularity (always Tick)
+            , Sub.map UiMessage UI.subscriptions
             ]
