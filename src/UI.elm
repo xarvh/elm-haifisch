@@ -110,7 +110,10 @@ selectBox game start end model =
 -- COMMAND
 
 command pos model =
-    ( model, [G.ShipCommand model.selectedIds G.Replace <| G.ThrustTo pos] )
+    let
+        queueMode = if model.shift then G.Append else G.Replace
+    in
+        ( model, [G.ShipCommand model.selectedIds queueMode <| G.ThrustTo pos] )
 
 
 

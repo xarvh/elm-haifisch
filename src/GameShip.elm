@@ -1,7 +1,7 @@
 module GameShip exposing (..)
 
 
-import GameCommon exposing (EmpireId, ShipId, Vector, vector, starSystemOuterRadius)
+import GameCommon as G exposing (EmpireId, ShipId, Vector, vector, starSystemOuterRadius)
 import Math.Vector2 as V
 
 
@@ -18,7 +18,7 @@ type alias Ship =
     , position : Vector
     , angle : Float
 
-    , commands : List GameCommon.ShipCommand
+    , commands : List G.ShipCommand
     }
 
 
@@ -44,7 +44,7 @@ normalizeAngle a =
         else a
 
 
-thrustBehavior targetPosition ship =
+thrustToBehavior targetPosition ship =
     -- TODO: check that ship can actually move (for ex, it is NOT in FTL)
     let
         difference =
@@ -53,34 +53,40 @@ thrustBehavior targetPosition ship =
         distance =
             V.length difference
 
-        targetAngle =
-            if distance < starSystemOuterRadius / 1000
-            then ship.angle
-            else atan2 (V.getY difference) (V.getX difference)
-
-        deltaAngle =
-            (targetAngle - ship.angle)
-
-        clampedDeltaAngle =
-            clamp -shipRateOfTurning shipRateOfTurning (normalizeAngle deltaAngle)
-
-
-        newAngle =
-            ship.angle + clampedDeltaAngle
-
-        speed =
-            min distance shipThrust
-
-        velocity =
-            V.vec2 (speed * cos newAngle) (speed * sin newAngle)
-
-        newPosition =
-            V.add ship.position velocity
+        distanceIsInsignificant =
+            distance < starSystemOuterRadius / 1000
     in
-        { ship
-        | angle = newAngle
-        , position = newPosition
-        }
+        if distanceIsInsignificant
+        then { ship | commands = List.drop 1 ship.commands }
+        else
+            let
+                targetAngle =
+                    if distanceIsInsignificant
+                    then ship.angle
+                    else atan2 (V.getY difference) (V.getX difference)
+
+                deltaAngle =
+                    (targetAngle - ship.angle)
+
+                clampedDeltaAngle =
+                    clamp -shipRateOfTurning shipRateOfTurning (normalizeAngle deltaAngle)
+
+                newAngle =
+                    ship.angle + clampedDeltaAngle
+
+                speed =
+                    min distance shipThrust
+
+                velocity =
+                    V.vec2 (speed * cos newAngle) (speed * sin newAngle)
+
+                newPosition =
+                    V.add ship.position velocity
+            in
+                { ship
+                | angle = newAngle
+                , position = newPosition
+                }
 
 
 
@@ -93,4 +99,5 @@ tick ship =
 
         Just command ->
             case command of
-                GameCommon.ThrustTo position -> thrustBehavior position ship
+                G.ThrustTo position ->
+                    thrustToBehavior position ship

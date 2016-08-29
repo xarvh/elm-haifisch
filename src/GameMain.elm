@@ -1,7 +1,7 @@
 module GameMain exposing (..)
 
 
-import GameCommon exposing (Id, EmpireId, ShipId, Vector, vector, Command (ShipCommand))
+import GameCommon as G exposing (Id, EmpireId, ShipId, Vector, vector, Command)
 
 import GameShip as Ship exposing (Ship)
 import GameEmpire as Empire
@@ -69,12 +69,17 @@ update message model =
 
         EmpireCommands empireId command ->
             case command of
-                ShipCommand shipIds queueMode shipCommand ->
+                G.ShipCommand shipIds queueMode shipCommand ->
                     let
+                        updateCommands cmds =
+                            case queueMode of
+                                G.Append -> cmds ++ [shipCommand]
+                                G.Replace -> [shipCommand]
+
                         mapShip ship =
                             if ship.empireId /= empireId || not (List.member ship.id shipIds)
                             then ship
-                            else { ship | commands = [shipCommand] }
+                            else { ship | commands = updateCommands ship.commands }
                     in
                         { model | ships = List.map mapShip model.ships }
 
