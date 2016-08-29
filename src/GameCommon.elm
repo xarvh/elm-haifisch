@@ -24,7 +24,7 @@ vector =
 
 vectorToString : Vector -> String
 vectorToString v =
-    "(" ++ toString (V.getX v) ++ "," ++ toString (V.getY v) ++ ")"
+    toString (V.getX v) ++ "," ++ toString (V.getY v)
 
 
 -- COMMANDS

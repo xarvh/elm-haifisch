@@ -1,20 +1,14 @@
 module View exposing (render)
 
 
-
 import GameMain as Game
-import GameCommon exposing (starSystemOuterRadius, vectorToString, normalizeBox)
+import GameCommon as G exposing (starSystemOuterRadius, vectorToString, normalizeBox)
 import Html
 import String
 import Svg
 import Svg.Events as E
 import Svg.Attributes as A
 import UI
-import Math.Vector2 as V
-
-
-
-
 
 
 drawShip viewerPlayerId ui ship =
@@ -27,7 +21,7 @@ drawShip viewerPlayerId ui ship =
     in
         Svg.path
             [   A.transform <| String.join " " <|
-                    [ "translate" ++ vectorToString ship.position
+                    [ "translate(" ++ vectorToString ship.position ++ ")"
                     , "scale(" ++ toString size ++ ")"
                     , "rotate(" ++ toString (ship.angle / degrees 1) ++ ")"
                     ]
@@ -50,6 +44,38 @@ drawShip viewerPlayerId ui ship =
             , UI.onEventCooked "mouseup" (UI.UserClicksShip ship.id)
             ]
             []
+
+
+drawShipCommand : G.Vector -> G.ShipCommand -> (G.Vector, Svg.Svg a)
+drawShipCommand start shipCommand =
+    case shipCommand of
+        G.ThrustTo end ->
+            ( end
+            , Svg.polyline
+                [ A.points <| vectorToString start ++ " " ++ vectorToString end
+                , A.fill "none"
+                , A.stroke "#0d0"
+                , A.strokeWidth "0.003"
+                ]
+                []
+            )
+
+
+drawShipCommandQueue viewerPlayerId ui ship =
+    if not <| List.member ship.id ui.selectedIds
+    then []
+    else
+        let
+            folder shipCommand (start, svgs) =
+                let (end, svg) = drawShipCommand start shipCommand
+                in (end, svg :: svgs)
+
+            (end, svgs) =
+                List.foldl folder (ship.position, []) ship.commands
+        in
+            svgs
+
+
 
 
 star =
@@ -122,9 +148,11 @@ render viewerPlayerId game ui =
         , UI.onEventCooked "mousedown" UI.StarSystemMousePress
         , UI.onEventCooked "mouseup" UI.StarSystemMouseRelease
         ]
-        <| List.concat
+        <| List.concat <|
             [ [star]
             , [outerWellMarker]
             , selectionBox ui
             , List.map (drawShip viewerPlayerId ui) game.ships
             ]
+            ++
+            (List.map (drawShipCommandQueue viewerPlayerId ui) game.ships)
