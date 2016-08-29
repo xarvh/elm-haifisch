@@ -14,6 +14,7 @@ import GameMain as Game
 
 import Html.Events
 import Json.Decode as Json exposing ((:=))
+import Keyboard
 import Svg
 import Svg.Events
 import SvgMouse
@@ -49,6 +50,9 @@ type alias Model =
 
     , selectionBox : Maybe Vector
     , starSystemMousePosition : Vector
+
+    , ctrl : Bool
+    , shift : Bool
     }
 
 
@@ -58,7 +62,10 @@ init =
     , selectedIds = [1..99]
     , selectionBox = Nothing
     , starSystemMousePosition = vector 0 0
+    , ctrl = False
+    , shift = False
     }
+
 
 
 
@@ -179,6 +186,14 @@ manageStarSystemMouse game mouseButton mouseButtonDirection pos model =
                             selectBox game startPosition pos model
 
 
+-- KEYBOARD
+
+manageKeys status keyCode model =
+    noCmd <| case keyCode of
+        16 -> { model | shift = status }
+        17 -> { model | ctrl = status }
+        _ -> model
+
 
 
 -- UPDATE
@@ -191,12 +206,20 @@ type Message
 
     | UserClicksShip Int MouseButtonIndex Vector
 
+    | KeyPress Keyboard.KeyCode
+    | KeyRelease Keyboard.KeyCode
 
 
 
 update : Game.Game -> Message -> Model -> (Model, List Command)
 update game message model =
     case message of
+
+        KeyPress key ->
+            manageKeys True key model
+
+        KeyRelease key ->
+            manageKeys False key model
 
         StarSystemMouseMove button pos ->
             noCmd { model | starSystemMousePosition = pos }
@@ -209,3 +232,13 @@ update game message model =
 
         UserClicksShip shipId button pos ->
             noCmd <| select ShipSelection [shipId] model
+
+
+-- SUBS
+
+
+subscriptions =
+    Sub.batch
+        [ Keyboard.downs KeyPress
+        , Keyboard.ups KeyRelease
+        ]
