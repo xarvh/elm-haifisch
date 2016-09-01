@@ -9,7 +9,7 @@ import Math.Vector2 as V
 
 type alias Id = Int
 type alias EmpireId = Id
-type alias ShipId = Id
+type alias FleetId = Id
 
 
 
@@ -36,13 +36,13 @@ type QueueMode
 
 
 
-type ShipCommand
+type FleetCommand
     = ThrustTo Vector
 
 
 
 type Command
-    = ShipCommand (List ShipId) QueueMode ShipCommand
+    = FleetCommand (List FleetId) QueueMode FleetCommand
 
 
 -- This is the max distance a ship can be from a star outside FTL

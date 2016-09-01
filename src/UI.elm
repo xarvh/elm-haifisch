@@ -27,7 +27,7 @@ import Math.Vector2 as V
 
 
 type SelectionType
-    = ShipSelection
+    = FleetSelection
 
 
 type MouseButtonIndex
@@ -58,7 +58,7 @@ type alias Model =
 
 
 init =
-    { selectionType = ShipSelection
+    { selectionType = FleetSelection
     , selectedIds = [1..99]
     , selectionBox = Nothing
     , starSystemMousePosition = vector 0 0
@@ -73,7 +73,7 @@ init =
 
 select selectionType selectedIds model =
     { model
-    | selectionType = ShipSelection
+    | selectionType = FleetSelection
     , selectedIds = selectedIds
     , selectionBox = Nothing
     }
@@ -84,21 +84,23 @@ selectBox game start end model =
         (x, y, x', y') =
             normalizeBox start end
 
-        fm ship =
+        isInBox ship =
             let
-                sx = V.getX ship.position
-                sy = V.getY ship.position
+                (sx, sy) = V.toTuple ship.currentPosition
             in
-                if sx >= x && sx <= x'
+                sx >= x && sx <= x'
                 && sy >= y && sy <= y'
-              --   && ship.empireId == currentPlayerId
-                then Just ship.id
-                else Nothing
+
+        fm fleet =
+            if List.any isInBox fleet.ships
+             --   && fleet.empireId == currentPlayerId
+            then Just fleet.id
+            else Nothing
 
     in
         { model
-        | selectionType = ShipSelection
-        , selectedIds = List.filterMap fm game.ships
+        | selectionType = FleetSelection
+        , selectedIds = List.filterMap fm game.fleets
         , selectionBox = Nothing
         }
 
@@ -113,7 +115,7 @@ command pos model =
     let
         queueMode = if model.shift then G.Append else G.Replace
     in
-        ( model, [G.ShipCommand model.selectedIds queueMode <| G.ThrustTo pos] )
+        ( model, [G.FleetCommand model.selectedIds queueMode <| G.ThrustTo pos] )
 
 
 
@@ -184,7 +186,7 @@ manageStarSystemMouse game mouseButton mouseButtonDirection pos model =
                 MouseRelease ->
                     case model.selectionBox of
                         Nothing ->
-                            select ShipSelection [] model
+                            select FleetSelection [] model
                         Just startPosition ->
                             selectBox game startPosition pos model
 
@@ -207,7 +209,7 @@ type Message
     | StarSystemMousePress MouseButtonIndex Vector
     | StarSystemMouseRelease MouseButtonIndex Vector
 
-    | UserClicksShip Int MouseButtonIndex Vector
+    | UserClicksFleet Int MouseButtonIndex Vector
 
     | KeyPress Keyboard.KeyCode
     | KeyRelease Keyboard.KeyCode
@@ -233,8 +235,8 @@ update game message model =
         StarSystemMouseRelease button pos ->
             manageStarSystemMouse game button MouseRelease pos model
 
-        UserClicksShip shipId button pos ->
-            noCmd <| select ShipSelection [shipId] model
+        UserClicksFleet fleetId button pos ->
+            noCmd <| select FleetSelection [fleetId] model
 
 
 -- SUBS

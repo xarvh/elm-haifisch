@@ -1,9 +1,9 @@
 module GameMain exposing (..)
 
 
-import GameCommon as G exposing (Id, EmpireId, ShipId, Vector, vector, Command)
+import GameCommon as G exposing (Id, EmpireId, FleetId, Vector, vector, Command)
 
-import GameShip as Ship exposing (Ship)
+import GameFleet as Fleet exposing (Fleet, Ship)
 import GameEmpire as Empire
 
 
@@ -16,7 +16,7 @@ import GameEmpire as Empire
 type alias Game =
     { nextId : Id
     , empires : List Empire.Empire
-    , ships : List Ship.Ship
+    , fleets : List Fleet
     , ticksSinceStart : Int
     }
 
@@ -31,14 +31,21 @@ type Message
 
 
 -- FUNCTIONS
-addShip : Float -> Float -> Game -> Game
-addShip x y game =
+addFleet : Float -> Float -> Game -> Game
+addFleet x y game =
     let
-        ship = Ship game.nextId 0 (vector x y) 0 []
+        pos =
+            (vector x y)
+
+        ship =
+            Ship pos pos 0 False
+
+        fleet =
+            Fleet game.nextId 0 [ship] []
     in
         { game
         | nextId = game.nextId + 1
-        , ships = ship :: game.ships
+        , fleets = fleet :: game.fleets
         }
 
 
@@ -47,16 +54,16 @@ addShip x y game =
 
 init =
     Game 1 [] [] 0
-    |> addShip (1/2) (1/2)
-    |> addShip (1/3) (1/3)
-    |> addShip (1/2) (1/3)
+    |> addFleet (1/2) (1/2)
+    |> addFleet (1/3) (1/3)
+    |> addFleet (1/2) (1/3)
 
 
 
 tick : Game -> Game
 tick model =
     { model
-    | ships = List.map Ship.tick model.ships
+    | fleets = List.map Fleet.tick model.fleets
     }
 
 
@@ -69,17 +76,17 @@ update message model =
 
         EmpireCommands empireId command ->
             case command of
-                G.ShipCommand shipIds queueMode shipCommand ->
+                G.FleetCommand fleetIds queueMode fleetCommand ->
                     let
                         updateCommands cmds =
                             case queueMode of
-                                G.Append -> cmds ++ [shipCommand]
-                                G.Replace -> [shipCommand]
+                                G.Append -> cmds ++ [fleetCommand]
+                                G.Replace -> [fleetCommand]
 
-                        mapShip ship =
-                            if ship.empireId /= empireId || not (List.member ship.id shipIds)
-                            then ship
-                            else { ship | commands = updateCommands ship.commands }
+                        mapFleet fleet =
+                            if fleet.empireId /= empireId || not (List.member fleet.id fleetIds)
+                            then fleet
+                            else { fleet | commands = updateCommands fleet.commands }
                     in
-                        { model | ships = List.map mapShip model.ships }
+                        { model | fleets = List.map mapFleet model.fleets }
 

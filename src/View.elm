@@ -2,7 +2,7 @@ module View exposing (render)
 
 
 import GameMain as Game
-import GameCommon as G exposing (starSystemOuterRadius, vectorToString, normalizeBox)
+import GameCommon as G exposing (starSystemOuterRadius, vectorToString, normalizeBox, vector)
 import Html
 import String
 import Svg
@@ -11,17 +11,14 @@ import Svg.Attributes as A
 import UI
 
 
-drawShip viewerPlayerId ui ship =
+drawShip isSelected fleetId ship =
     let
         size =
             0.05
-
-        isSelected =
-            List.member ship.id ui.selectedIds
     in
         Svg.path
             [   A.transform <| String.join " " <|
-                    [ "translate(" ++ vectorToString ship.position ++ ")"
+                    [ "translate(" ++ vectorToString ship.currentPosition ++ ")"
                     , "scale(" ++ toString size ++ ")"
                     , "rotate(" ++ toString (ship.angle / degrees 1) ++ ")"
                     ]
@@ -41,13 +38,25 @@ drawShip viewerPlayerId ui ship =
                 ]
 
             , UI.onEventCooked "mousedown" UI.StarSystemMouseMove
-            , UI.onEventCooked "mouseup" (UI.UserClicksShip ship.id)
+            , UI.onEventCooked "mouseup" (UI.UserClicksFleet fleetId)
             ]
             []
 
 
-drawShipCommand : G.Vector -> G.ShipCommand -> (G.Vector, Svg.Svg a)
-drawShipCommand start shipCommand =
+
+drawFleet viewerPlayerId ui fleet =
+    let
+        isSelected =
+            List.member fleet.id ui.selectedIds
+    in
+        List.map (drawShip isSelected fleet.id) fleet.ships
+
+
+
+
+
+drawFleetCommand : G.Vector -> G.FleetCommand -> (G.Vector, Svg.Svg a)
+drawFleetCommand start shipCommand =
     case shipCommand of
         G.ThrustTo end ->
             ( end
@@ -61,17 +70,22 @@ drawShipCommand start shipCommand =
             )
 
 
-drawShipCommandQueue viewerPlayerId ui ship =
-    if not <| List.member ship.id ui.selectedIds
+drawFleetCommandQueue viewerPlayerId ui fleet =
+    if not <| List.member fleet.id ui.selectedIds
     then []
     else
         let
-            folder shipCommand (start, svgs) =
-                let (end, svg) = drawShipCommand start shipCommand
+            folder fleetCommand (start, svgs) =
+                let (end, svg) = drawFleetCommand start fleetCommand
                 in (end, svg :: svgs)
 
+            start =
+                List.head fleet.ships
+                |> Maybe.map .currentPosition
+                |> Maybe.withDefault (vector 0 0)
+
             (end, svgs) =
-                List.foldl folder (ship.position, []) ship.commands
+                List.foldl folder (start, []) fleet.commands
         in
             svgs
 
@@ -152,7 +166,8 @@ render viewerPlayerId game ui =
             [ [star]
             , [outerWellMarker]
             , selectionBox ui
-            , List.map (drawShip viewerPlayerId ui) game.ships
             ]
             ++
-            (List.map (drawShipCommandQueue viewerPlayerId ui) game.ships)
+            (List.map (drawFleet viewerPlayerId ui) game.fleets)
+            ++
+            (List.map (drawFleetCommandQueue viewerPlayerId ui) game.fleets)
