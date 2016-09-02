@@ -102,6 +102,15 @@ shipThrusts ship =
 
 
 
+
+rotate90 v =
+    let
+        (x, y) = V.toTuple v
+    in
+        vector (y) (-x)
+
+
+
 formation : Vector -> List Ship -> List Ship
 formation targetPosition ships =
     let
@@ -113,11 +122,23 @@ formation targetPosition ships =
         formationDirection =
             V.direction targetPosition initialPosition
 
+        formationOrthogonal =
+            rotate90 formationDirection
+
+        formationScale =
+            0.08
+
         folder ship (ships, row, column) =
             let
-                -- TODO: rotate to match formationDirection
+
+                r =
+                    V.scale (-row * formationScale) formationDirection
+
+                c =
+                    V.scale (column * formationScale) formationOrthogonal
+
                 pos =
-                    V.add targetPosition <| vector (row / 0.01) (column / 0.01)
+                    V.add targetPosition <| V.add r c
 
                 newShip =
                     { ship | targetPosition = pos }
@@ -127,7 +148,7 @@ formation targetPosition ships =
                     then (row + 1, 0)
                     else (row, column + 1)
             in
-                (List.append ships [newShip], row, column)
+                (List.append ships [newShip], nextRow, nextColumn)
 
 
         (newShips, row, column) =

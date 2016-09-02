@@ -41,7 +41,7 @@ addFleet x y game =
             Ship pos pos 0 False
 
         fleet =
-            Fleet game.nextId 0 [ship] []
+            Fleet game.nextId 0 (List.repeat 30 ship) []
     in
         { game
         | nextId = game.nextId + 1
@@ -55,8 +55,8 @@ addFleet x y game =
 init =
     Game 1 [] [] 0
     |> addFleet (1/2) (1/2)
-    |> addFleet (1/3) (1/3)
-    |> addFleet (1/2) (1/3)
+--     |> addFleet (1/3) (1/3)
+--     |> addFleet (1/2) (1/3)
 
 
 
