@@ -194,10 +194,13 @@ manageStarSystemMouse game mouseButton mouseButtonDirection pos model =
 -- KEYBOARD
 
 manageKeys status keyCode model =
-    noCmd <| case keyCode of
-        16 -> { model | shift = status }
-        17 -> { model | ctrl = status }
-        _ -> model
+    case keyCode of
+        16 -> noCmd { model | shift = status }
+        17 -> noCmd { model | ctrl = status }
+
+        -- space bar
+        32 -> ( model, if status then [G.TogglePause] else [] )
+        _ -> let a = Debug.log "key" keyCode in noCmd model
 
 
 

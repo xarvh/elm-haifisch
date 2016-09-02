@@ -43,6 +43,7 @@ type FleetCommand
 
 type Command
     = FleetCommand (List FleetId) QueueMode FleetCommand
+    | TogglePause
 
 
 -- This is the max distance a ship can be from a star outside FTL

@@ -65,7 +65,6 @@ shipThrusts ship =
 
         distanceIsInsignificant =
             distance < starSystemOuterRadius / 1000
-
     in
         if distanceIsInsignificant
         then { ship | isThrusting = False }
@@ -119,6 +118,7 @@ formation targetPosition ships =
             |> Maybe.map .currentPosition
             |> Maybe.withDefault (vector 0 0)
 
+        -- TODO: what happens when targetPosition == initialPosition?
         formationDirection =
             V.direction targetPosition initialPosition
 

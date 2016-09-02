@@ -18,6 +18,7 @@ type alias Game =
     , empires : List Empire.Empire
     , fleets : List Fleet
     , ticksSinceStart : Int
+    , pause : Bool
     }
 
 
@@ -41,7 +42,7 @@ addFleet x y game =
             Ship pos pos 0 False
 
         fleet =
-            Fleet game.nextId 0 (List.repeat 30 ship) []
+            Fleet game.nextId 0 (List.repeat 1 ship) []
     in
         { game
         | nextId = game.nextId + 1
@@ -53,7 +54,7 @@ addFleet x y game =
 
 
 init =
-    Game 1 [] [] 0
+    Game 1 [] [] 0 False
     |> addFleet (1/2) (1/2)
 --     |> addFleet (1/3) (1/3)
 --     |> addFleet (1/2) (1/3)
@@ -72,7 +73,7 @@ update : Message -> Game -> Game
 update message model =
     case message of
         Tick ->
-            tick model
+            if model.pause then model else tick model
 
         EmpireCommands empireId command ->
             case command of
@@ -90,3 +91,5 @@ update message model =
                     in
                         { model | fleets = List.map mapFleet model.fleets }
 
+                G.TogglePause ->
+                    { model | pause = not model.pause }
