@@ -35,14 +35,8 @@ type Message
 addFleet : Float -> Float -> Game -> Game
 addFleet x y game =
     let
-        pos =
-            (vector x y)
-
-        ship =
-            Ship pos pos 0 False
-
         fleet =
-            Fleet game.nextId 0 (List.repeat 1 ship) []
+            Fleet.init game.nextId 0 (vector x y)
     in
         { game
         | nextId = game.nextId + 1

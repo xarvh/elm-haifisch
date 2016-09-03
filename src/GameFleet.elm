@@ -28,8 +28,24 @@ type alias Fleet =
         InFTL starSystemId StarSystemId completion
     -}
 
+    -- formationDirection is to be updated whenever formationTarget chagnes
+    , formationTarget : Vector
+    , formationDirection : Vector
+
     , commands : List G.FleetCommand
     }
+
+
+
+init id empireId position =
+    let
+        formationDirection =
+            V.normalize <| V.negate position
+
+        ship =
+            Ship position position 0 False
+    in
+        Fleet id 0 (List.repeat 30 ship) formationDirection position []
 
 
 
@@ -110,20 +126,20 @@ rotate90 v =
 
 
 
-formation : Vector -> List Ship -> List Ship
-formation targetPosition ships =
+fleetPosition fleet =
+    List.head fleet.ships
+    |> Maybe.map .currentPosition
+    |> Maybe.withDefault (vector 0 0)
+
+
+
+
+
+formation : Vector -> Fleet -> List Ship
+formation targetPosition fleet =
     let
-        initialPosition =
-            List.head ships
-            |> Maybe.map .currentPosition
-            |> Maybe.withDefault (vector 0 0)
-
-        -- TODO: what happens when targetPosition == initialPosition?
-        formationDirection =
-            V.direction targetPosition initialPosition
-
         formationOrthogonal =
-            rotate90 formationDirection
+            rotate90 fleet.formationDirection
 
         formationScale =
             0.08
@@ -132,7 +148,7 @@ formation targetPosition ships =
             let
 
                 r =
-                    V.scale (-row * formationScale) formationDirection
+                    V.scale (-row * formationScale) fleet.formationDirection
 
                 c =
                     V.scale (column * formationScale) formationOrthogonal
@@ -152,18 +168,34 @@ formation targetPosition ships =
 
 
         (newShips, row, column) =
-            List.foldl folder ([], 0, 0) ships
+            List.foldl folder ([], 0, 0) fleet.ships
     in
         newShips
 
 
 
-thrustToBehavior targetPosition fleet =
+thrustToBehavior targetPosition oldFleet =
     let
         -- TODO: check that fleet can actually move (for ex, it is NOT in FTL)
 
+        -- if target changed, update formation direction
+        (newFormationDirection, newFormationTarget) =
+            if targetPosition == oldFleet.formationTarget
+            then ( oldFleet.formationDirection, oldFleet.formationTarget )
+            else
+                -- if updating formationDirection would result into a NaN, maintain the old one
+                if targetPosition == fleetPosition oldFleet
+                then ( oldFleet.formationDirection, targetPosition )
+                else ( V.direction targetPosition (fleetPosition oldFleet), targetPosition )
+
+        newFleet =
+            { oldFleet
+            | formationDirection = newFormationDirection
+            , formationTarget = newFormationTarget
+            }
+
         newShips =
-            formation targetPosition fleet.ships
+            formation targetPosition newFleet
             |> List.map shipThrusts
 
         isStillMoving =
@@ -171,10 +203,10 @@ thrustToBehavior targetPosition fleet =
 
         newCommands =
             if isStillMoving
-            then fleet.commands
-            else List.drop 1 fleet.commands
+            then newFleet.commands
+            else List.drop 1 newFleet.commands
     in
-        { fleet
+        { newFleet
         | ships = newShips
         , commands = newCommands
         }
