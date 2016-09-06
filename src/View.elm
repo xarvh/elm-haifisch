@@ -1,8 +1,15 @@
 module View exposing (render)
 
 
-import GameMain as Game
-import GameCommon as G exposing (starSystemOuterRadius, vectorToString, normalizeBox, vector)
+-- import GameMain
+import GameCommon as G exposing
+    ( Game
+    , starSystemOuterRadius
+    , vectorToString
+    , normalizeBox
+    , vector
+    )
+
 import Html
 import String
 import Svg
@@ -68,6 +75,10 @@ drawFleetCommand start shipCommand =
                 ]
                 []
             )
+
+        -- TODO: add MergeWith
+        _ ->
+            ( start, Svg.polyline [] [] )
 
 
 drawFleetCommandQueue viewerPlayerId ui fleet =
@@ -147,7 +158,7 @@ selectionBox ui =
 
 
 
-render : Int -> Game.Game -> UI.Model -> Html.Html UI.Message
+render : Int -> Game -> UI.Model -> Html.Html UI.Message
 render viewerPlayerId game ui =
     Svg.svg
         [ A.height "100vh"

@@ -9,7 +9,7 @@ import View
 import Html.App
 
 
-import GameCommon exposing (Command, EmpireId)
+import GameCommon exposing (Game, Command, EmpireId)
 import GameMain
 import UI
 
@@ -27,7 +27,7 @@ granularity =
 
 
 type alias Model =
-    { game : GameMain.Game
+    { game : Game
     , ui : UI.Model
     , currentPlayerId : EmpireId
     }

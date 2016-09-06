@@ -2,7 +2,8 @@ module UI exposing (..)
 
 
 import GameCommon as G exposing
-    ( Vector
+    ( Game
+    , Vector
     , vector
     , starSystemOuterRadius
     , normalizeBox
@@ -10,7 +11,7 @@ import GameCommon as G exposing
     )
 
 import GameEmpire as Empire
-import GameMain as Game
+import GameMain
 
 import Html.Events
 import Json.Decode as Json exposing ((:=))
@@ -111,11 +112,13 @@ selectBox game start end model =
 
 -- COMMAND
 
+
+queueMode model =
+    if model.shift then G.Append else G.Replace
+
+
 command pos model =
-    let
-        queueMode = if model.shift then G.Append else G.Replace
-    in
-        ( model, [G.FleetCommand model.selectedIds queueMode <| G.ThrustTo pos] )
+    ( model, [G.FleetCommand model.selectedIds (queueMode model) <| G.ThrustTo pos] )
 
 
 
@@ -191,15 +194,38 @@ manageStarSystemMouse game mouseButton mouseButtonDirection pos model =
                             selectBox game startPosition pos model
 
 
+
+
+-- COMMANDS FACTORIES
+
+
+mergeFleets : Game -> Model -> List G.Command
+mergeFleets game model =
+    case List.filter (\fleet -> List.member fleet.id model.selectedIds) game.fleets |> List.map .id of
+
+        first :: others ->
+            [ G.FleetCommand others (queueMode model) (G.MergeWith first) ]
+
+        [] ->
+            []
+
+
+
+
 -- KEYBOARD
 
-manageKeys status keyCode model =
+manageKeys game status keyCode model =
     case keyCode of
         16 -> noCmd { model | shift = status }
         17 -> noCmd { model | ctrl = status }
 
         -- space bar
         32 -> ( model, if status then [G.TogglePause] else [] )
+
+        -- M
+        77 -> ( model, if status then mergeFleets game model else [] )
+
+
         _ -> let a = Debug.log "key" keyCode in noCmd model
 
 
@@ -219,15 +245,15 @@ type Message
 
 
 
-update : Game.Game -> Message -> Model -> (Model, List Command)
+update : Game -> Message -> Model -> (Model, List Command)
 update game message model =
     case message of
 
         KeyPress key ->
-            manageKeys True key model
+            manageKeys game True key model
 
         KeyRelease key ->
-            manageKeys False key model
+            manageKeys game False key model
 
         StarSystemMouseMove button pos ->
             noCmd { model | starSystemMousePosition = pos }

@@ -1,40 +1,56 @@
 module GameFleet exposing (..)
 
 
-import GameCommon as G exposing (EmpireId, FleetId, Vector, vector, starSystemOuterRadius)
 import Math.Vector2 as V
 
+import GameCommon as G exposing
+    ( Game
+    , GameEffect
+    , Fleet
+    , Ship
+    , EmpireId
+    , FleetId
+    , Vector
+    , vector
+    , starSystemOuterRadius
+    )
 
 
 
-type alias Ship =
-    { currentPosition : Vector
-    , targetPosition : Vector
-    , angle : Float
-    , isThrusting : Bool
-    }
+-- CONSTANTS
+
+
+shipRateOfTurning =
+    turns 0.02
+
+
+shipThrust =
+    starSystemOuterRadius / 100
+
+
+mergeDistance =
+    0.005 * starSystemOuterRadius
 
 
 
-type alias Fleet =
-    { id : FleetId
-    , empireId : EmpireId
+-- HELPERS
 
-    , ships : List Ship
 
-    {- TODO
-    Position =
-        StarSystem starSystemId
-        InFTL starSystemId StarSystemId completion
-    -}
+popCommand fleet =
+    { fleet | commands = List.drop 1 fleet.commands }
 
-    -- formationDirection is to be updated whenever formationTarget chagnes
-    , formationTarget : Vector
-    , formationDirection : Vector
 
-    , commands : List G.FleetCommand
-    }
+noEffect fleet =
+    ( fleet, [] )
 
+
+
+
+
+
+
+
+-- INIT
 
 
 init id empireId position =
@@ -45,16 +61,9 @@ init id empireId position =
         ship =
             Ship position position 0 False
     in
-        Fleet id 0 (List.repeat 30 ship) formationDirection position []
+        Fleet id 0 (List.repeat 2 ship) formationDirection position []
 
 
-
-shipRateOfTurning =
-    turns 0.02
-
-
-shipThrust =
-    starSystemOuterRadius / 100
 
 
 idleBehavior fleet =
@@ -201,26 +210,54 @@ thrustToBehavior targetPosition oldFleet =
         isStillMoving =
             List.any .isThrusting newShips
 
-        newCommands =
+        updateCommands =
             if isStillMoving
-            then newFleet.commands
-            else List.drop 1 newFleet.commands
+            then identity
+            else popCommand
     in
-        { newFleet
-        | ships = newShips
-        , commands = newCommands
-        }
+        updateCommands { newFleet | ships = newShips }
 
 
 
-tick : Fleet -> Fleet
-tick fleet =
+
+
+
+
+
+mergeWithBehavior : Game -> Int -> Fleet -> ( Fleet, List GameEffect )
+mergeWithBehavior game targetFleetId oldFleet =
+    case G.findId targetFleetId game.fleets of
+
+        Nothing ->
+            noEffect <| popCommand oldFleet
+
+        Just targetFleet ->
+            let
+                pos = fleetPosition oldFleet
+                targ = fleetPosition targetFleet
+
+                ( effects, updateCommands )=
+                    if V.distanceSquared pos targ > mergeDistance * mergeDistance
+                    then ( [], thrustToBehavior targ )
+                    else ( [G.MergeFleets oldFleet.id targetFleetId], popCommand )
+            in
+                ( updateCommands oldFleet, effects )
+
+
+
+
+tick : Game -> Fleet -> ( Fleet, List GameEffect )
+tick game fleet =
     case List.head fleet.commands of
 
         Nothing ->
-            idleBehavior fleet
+            noEffect <| idleBehavior fleet
 
         Just command ->
             case command of
+
                 G.ThrustTo targetPosition ->
-                    thrustToBehavior targetPosition fleet
+                    noEffect <| thrustToBehavior targetPosition fleet
+
+                G.MergeWith targetFleetId ->
+                    mergeWithBehavior game targetFleetId fleet
