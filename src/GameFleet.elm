@@ -21,7 +21,7 @@ import GameCommon as G exposing
 
 
 shipRateOfTurning =
-    turns 0.02
+    turns 0.05
 
 
 shipThrust =

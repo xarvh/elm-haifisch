@@ -11,6 +11,7 @@ import GameCommon as G exposing
     )
 
 import Html
+import Html.Attributes
 import String
 import Svg
 import Svg.Events as E
@@ -160,25 +161,36 @@ selectionBox ui =
 
 render : Int -> Game -> UI.Model -> Html.Html UI.Message
 render viewerPlayerId game ui =
-    Svg.svg
-        [ A.height "100vh"
-        , A.viewBox "-1 -1 2 2"
-        , A.preserveAspectRatio "xMidYMid meet"
-
-        , A.style "border: 1px solid #333333;"
-
-        , A.id UI.starSystemSvgId
-        , UI.onEventCooked "mousemove" UI.StarSystemMouseMove
-        , UI.onEventCooked "contextmenu" UI.StarSystemMouseMove
-        , UI.onEventCooked "mousedown" UI.StarSystemMousePress
-        , UI.onEventCooked "mouseup" UI.StarSystemMouseRelease
-        ]
-        <| List.concat <|
-            [ [star]
-            , [outerWellMarker]
-            , selectionBox ui
+    Html.div
+        [ Html.Attributes.style
+            [ ( "position", "absolute" )
+            , ( "width", "100wh" )
+            , ( "height", "100vh" )
+            , ( "top", "50%" )
+            , ( "left", "50%" )
+            , ( "transform", "translateX(-50%) translateY(-50%)" )
             ]
-            ++
-            (List.map (drawFleet viewerPlayerId ui) game.fleets)
-            ++
-            (List.map (drawFleetCommandQueue viewerPlayerId ui) game.fleets)
+        ]
+        [ Svg.svg
+            [ A.height "100vh"
+            , A.viewBox "-1 -1 2 2"
+            , A.preserveAspectRatio "xMidYMid meet"
+
+            , A.style "border: 1px solid #333333;"
+
+            , A.id UI.starSystemSvgId
+            , UI.onEventCooked "mousemove" UI.StarSystemMouseMove
+            , UI.onEventCooked "contextmenu" UI.StarSystemMouseMove
+            , UI.onEventCooked "mousedown" UI.StarSystemMousePress
+            , UI.onEventCooked "mouseup" UI.StarSystemMouseRelease
+            ]
+            <| List.concat <|
+                [ [star]
+                , [outerWellMarker]
+                , selectionBox ui
+                ]
+                ++
+                (List.map (drawFleet viewerPlayerId ui) game.fleets)
+                ++
+                (List.map (drawFleetCommandQueue viewerPlayerId ui) game.fleets)
+        ]
