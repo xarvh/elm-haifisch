@@ -207,11 +207,13 @@ thrustToBehavior targetPosition oldFleet =
             formation targetPosition newFleet
             |> List.map shipThrusts
 
-        isStillMoving =
-            List.any .isThrusting newShips
+        isOngoing =
+            List.head newShips
+            |> Maybe.map .isThrusting
+            |> Maybe.withDefault False
 
         updateCommands =
-            if isStillMoving
+            if isOngoing
             then identity
             else popCommand
     in
