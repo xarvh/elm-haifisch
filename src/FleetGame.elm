@@ -1,4 +1,4 @@
-module GameFleet exposing (..)
+module FleetGame exposing (..)
 
 
 import Math.Vector2 as V

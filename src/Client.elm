@@ -5,13 +5,13 @@ import Keyboard
 import Process
 import Task
 import Time
-import View
 import Html.App
 
 
 import GameCommon exposing (Game, Command, EmpireId)
 import GameMain
 import UI
+import UIView
 
 
 
@@ -52,10 +52,10 @@ type ServerMessage =
 
 
 
-type Message
+type Msg
     = Noop
     | Tick
-    | UiMessage UI.Message
+    | ToUiMessage UI.Msg
     | ReceiveFromServer ServerMessage
 
 
@@ -68,7 +68,7 @@ type Message
 {- TODO
     For now, just reroute straight back all commands, adding some lag
 -}
-sendToServer : List Command -> Cmd Message
+sendToServer : List Command -> Cmd Msg
 sendToServer commands =
     let
         playerId =
@@ -124,7 +124,7 @@ update msg model =
                 GameCommand empireId command ->
                     updateGame (GameMain.EmpireCommands empireId command) model
 
-        UiMessage uiMessage ->
+        ToUiMessage uiMessage ->
             let
                 ( newUiModel, commands ) =
                     UI.update model.game uiMessage model.ui
@@ -140,12 +140,12 @@ update msg model =
 
 
 view model =
-    Html.App.map UiMessage <| View.render model.currentPlayerId model.game model.ui
+    Html.App.map ToUiMessage <| UIView.view model.currentPlayerId model.game model.ui
 
 
 
 subscriptions model =
     Sub.batch
         [ Time.every granularity (always Tick)
-        , Sub.map UiMessage UI.subscriptions
+        , Sub.map ToUiMessage UI.subscriptions
         ]

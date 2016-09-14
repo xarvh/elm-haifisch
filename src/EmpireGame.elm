@@ -1,4 +1,4 @@
-module GameEmpire exposing (..)
+module EmpireGame exposing (..)
 
 
 import GameCommon exposing (..)

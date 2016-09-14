@@ -10,14 +10,11 @@ import GameCommon as G exposing
     , Command
     )
 
-import GameEmpire as Empire
 import GameMain
 
 import Html.Events
 import Json.Decode as Json exposing ((:=))
 import Keyboard
-import Svg
-import Svg.Events
 import SvgMouse
 
 import Math.Vector2 as V
@@ -44,8 +41,6 @@ type MouseButtonMovement
 
 
 type alias Model =
-    -- TODO: right now this refers to an **EmpireId**
-
     { selectionType : SelectionType
     , selectedIds : List Int -- TODO: this should be a set (I assume it would be faster on membership checks?)
 
@@ -233,7 +228,7 @@ manageKeys game status keyCode model =
 -- UPDATE
 
 
-type Message
+type Msg
     = StarSystemMouseMove MouseButtonIndex Vector
     | StarSystemMousePress MouseButtonIndex Vector
     | StarSystemMouseRelease MouseButtonIndex Vector
@@ -245,7 +240,7 @@ type Message
 
 
 
-update : Game -> Message -> Model -> (Model, List Command)
+update : Game -> Msg -> Model -> (Model, List Command)
 update game message model =
     case message of
 

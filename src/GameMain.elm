@@ -1,6 +1,6 @@
 module GameMain exposing (..)
 
-import GameFleet as Fleet
+import FleetGame as Fleet
 
 import GameCommon as G exposing
     ( Game
