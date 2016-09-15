@@ -129,11 +129,9 @@ drawFleets asViewedByPlayerId game ui =
 view : Int -> Game -> UI.Model -> Svg.Svg UI.Msg
 view asViewedByPlayerId game ui =
     Svg.svg
-        [ A.height "100vh"
+        [ A.height "99vh"
         , A.viewBox "-1 -1 2 2"
         , A.preserveAspectRatio "xMidYMid meet"
-
-        , A.style "border: 1px solid #333333;"
 
         , A.id UI.starSystemSvgId
         , UI.onEventCooked "mousemove" UI.StarSystemMouseMove

@@ -154,3 +154,5 @@ normalizeBox a b =
 findId id =
     List.Extra.find (\item -> item.id == id)
 
+mapId =
+    flip findId
