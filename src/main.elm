@@ -3,7 +3,7 @@ import Client
 import Html.App as App
 
 
-main = App.program
+main = App.programWithFlags
     { init = Client.init
     , update = Client.update
     , subscriptions = Client.subscriptions

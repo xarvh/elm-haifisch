@@ -34,8 +34,8 @@ type alias Model =
 
 
 
-init =
-    ( Model GameMain.init UI.init 0
+init seed =
+    ( Model (GameMain.init seed) UI.init 0
     , Cmd.none
     )
 

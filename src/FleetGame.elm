@@ -2,6 +2,9 @@ module FleetGame exposing (..)
 
 
 import Math.Vector2 as V
+import Names
+import Random.Pcg as Random
+
 
 import GameCommon as G exposing
     ( Game
@@ -53,15 +56,22 @@ noEffect fleet =
 -- INIT
 
 
-init id empireId position =
+init : Int -> Int -> Vector -> Random.Seed -> ( Fleet, Random.Seed )
+init id empireId position seed =
     let
         formationDirection =
             V.normalize <| V.negate position
 
-        ship =
-            Ship position position 0 False
+        -- TODO: assign a proper id to ships
+        shipsGen =
+            Names.ship
+            |> Random.map (\name -> Ship 0 name position position 0 False)
+            |> Random.list 2
+
+        ( ships, newSeed ) =
+            Random.step shipsGen seed
     in
-        Fleet id 0 (List.repeat 2 ship) formationDirection position []
+        ( Fleet id "" 0 ships formationDirection position [], newSeed )
 
 
 

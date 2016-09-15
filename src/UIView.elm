@@ -29,7 +29,7 @@ menuShip fleet ship =
             , SA.viewBox "-1 -1 2 2"
             ]
             [ FleetView.shipSvg False ship ]
-        , H.text "Ship"
+        , H.text ship.name
         ]
 
 

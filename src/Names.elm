@@ -2,80 +2,73 @@ module Names exposing (..)
 
 
 
-
-
-import Dict exposing (Dict)
-import Random.Pcg as Random exposing (Generator)
-import String
-
-
--- import Regex exposing (All, regex, )
+import NameGenerator
+import Random.Pcg as Random
 
 
 
+defaultLexicon =
+    NameGenerator.fromString """
 
-type alias Definition =
-    List String
-
-type alias Lexicon =
-    Dict String (List Definition)
-
-
-
-{-
-
-    {
-        "fleet": [
-            "$adj Murder",
-            "$adj Fleet"
-        ],
-        "$adj": [
-            "Efferate",
-            "Merciless"
-        ]
-    }
+properNoun
+    # TODO: add more from https://en.wikipedia.org/wiki/Former_constellations
+    Ty,Long,Wads,
+    Amaat,Ente,Toren,Karl,Ilves,
+    Vaassar,Maat,Morne,Ultema,Tahna,Ebek,Uvud,Iloe
+    Auriga,Antilia,Acquila,Ara,Carina,Centaurus,Coma,Crux
+    Eridanus,Hydra,Pavo,Sagitta
 
 
--}
+adverb
+    always,inevitably,necessarily,surely,inescapably,assuredly
+
+superlativeAdjective
+    flawless,victorious,favoured,triumphant,successful,fortunate,propitious,lucky,outstanding,strong
+    auspicious,crowned,extraordinary,unbeaten,undefeated,unconquered,prevailing,excellent,superior,greatest
+    illustrious,splendid,fierce
+
+genericAdjective
+    blue,red,gray,bloody,yellow,black,white,azure
+    mighty,
+
+noun
+    champion,challenger,defender,conqueror,guardian,paladin,vanquisher,victor,warrior,augury
+    hammer,mallet,anvil
+    sword,mercy
+    blade,sabre,dagger,scimitar,foil,glaive
+    arrow
+    fury,anger,wrath,storm,lightning,thunder,omen,vengeance
+    light,sunrise,peace
+    Sun,Moon,Daystar
+    cross,
+
+
+potentiallyQualifiedNoun
+    {noun}
+    {noun}
+    {noun} of {properNoun}
+    {noun} of {properNoun}
+    {noun} of the Gods
+
+exalted
+    {adverb} {superlativeAdjective}
+    {adverb} {superlativeAdjective} {potentiallyQualifiedNoun}
+    {superlativeAdjective} {potentiallyQualifiedNoun}
+
+plain
+    {noun}
+    {genericAdjective} {properNoun}
+    {genericAdjective} {noun}
+    {genericAdjective}
+    {superlativeAdjective}
+
+ship
+    {exalted}
+    {plain}
+"""
 
 
 
-
-
-
-
-generateName : Lexicon -> String -> Generator String
-generateName lexicon key =
-
-    case Dict.get key lexicon of
-
-        Nothing ->
-            -- either the key is plain invalid, or it is stuck in a loop
-            Random.constant <| if Dict.isEmpty lexicon then "-O-" else "-I-"
-
-        Just definitions ->
-            let
-
-                reducedLexicon =
-                    Dict.remove key lexicon
-
-
-                -- TODO: PR to mgold/elm-random-pcb to add a mapN : (List a -> b) -> List (Generator a) -> Generator b
-                foldDefinition definitionFragment =
-                    Random.map2 (++) <|
-                        case String.uncons definitionFragment of
-                            Just ( '$', key ) -> generateName reducedLexicon key
-                            _ -> Random.constant definitionFragment
-
-
-                definitionToGenerator : Definition -> Generator String
-                definitionToGenerator definition =
-                    List.foldl foldDefinition (Random.constant "") definition
-
-
-                generator =
-                    Random.choices <| List.map definitionToGenerator definitions
-            in
-                generator
-
-
+ship =
+    NameGenerator.generator defaultLexicon "ship"
+    |> Random.map NameGenerator.capitalize
