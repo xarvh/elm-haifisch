@@ -40,7 +40,7 @@ menuShip fleet ship =
 menuFleet fleet =
     H.div
         []
-        [ H.text <| "Fleet " ++ toString fleet.id
+        [ H.text fleet.name
         , H.div [] <| List.map (menuShip fleet) fleet.ships
         ]
 

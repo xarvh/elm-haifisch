@@ -1,9 +1,20 @@
-module NameGenerator exposing
+module LexicalRandom exposing
     ( Definition, Lexicon
     , generator
     , capitalize
     , fromString
     )
+
+
+{-
+    TODO it'd be awesome to allow the caller to pass a dictionary of additional
+    constants that can be referenced by a key, to let the lexicon access
+    words like the Empire's name or the Leader's name or the ship's class...
+
+    TODO Try again to use
+    `generator : Lexicon -> String -> Generator (Result (List String) String)`
+    and make error results chainable.
+-}
 
 
 import Dict exposing (Dict)
@@ -46,7 +57,7 @@ generator lexicon key =
                     Dict.remove key lexicon
 
 
-                -- TODO: PR to mgold/elm-random-pcb to add a mapN : (List a -> b) -> List (Generator a) -> Generator b
+                -- TODO: Hopefully we get Random.combine soon enough https://github.com/mgold/elm-random-pcg/pull/8#issuecomment-237470918
                 foldDefinition definitionFragment accumulatedGenerator =
                     Random.map2 (++) accumulatedGenerator <|
                         case definitionFragment of

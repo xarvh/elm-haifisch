@@ -2,13 +2,13 @@ module Names exposing (..)
 
 
 
-import NameGenerator
+import LexicalRandom
 import Random.Pcg as Random
 
 
 
 defaultLexicon =
-    NameGenerator.fromString """
+    LexicalRandom.fromString """
 
 properNoun
     # TODO: add more from https://en.wikipedia.org/wiki/Former_constellations
@@ -17,7 +17,6 @@ properNoun
     Vaassar,Maat,Morne,Ultema,Tahna,Ebek,Uvud,Iloe
     Auriga,Antilia,Acquila,Ara,Carina,Centaurus,Coma,Crux
     Eridanus,Hydra,Pavo,Sagitta
-
 
 adverb
     always,inevitably,necessarily,surely,inescapably,assuredly
@@ -29,7 +28,7 @@ superlativeAdjective
 
 genericAdjective
     blue,red,gray,bloody,yellow,black,white,azure
-    mighty,
+    mighty,great,straight,lightning
 
 noun
     champion,challenger,defender,conqueror,guardian,paladin,vanquisher,victor,warrior,augury
@@ -59,16 +58,23 @@ plain
     {noun}
     {genericAdjective} {properNoun}
     {genericAdjective} {noun}
-    {genericAdjective}
     {superlativeAdjective}
 
 ship
     {exalted}
     {plain}
+
+fleet
+    {genericAdjective} Fleet
 """
 
 
+generatorByKey key =
+    LexicalRandom.generator defaultLexicon key
+    |> Random.map LexicalRandom.capitalize
 
 ship =
-    NameGenerator.generator defaultLexicon "ship"
-    |> Random.map NameGenerator.capitalize
+    generatorByKey "ship"
+
+fleet =
+    generatorByKey "fleet"

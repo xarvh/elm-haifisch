@@ -83,8 +83,7 @@ init empireId position ( nextId0, seed0 ) =
             (nextId1, nextId1 + 1)
 
         (fleetName, seed2) =
-            -- TODO: use a fleet name
-            Random.step Names.ship seed1
+            Random.step Names.fleet seed1
     in
         ( Fleet fleetId fleetName 0 ships formationDirection position [], nextId2, seed2 )
 

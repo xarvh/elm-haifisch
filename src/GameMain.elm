@@ -37,9 +37,9 @@ addFleet x y game =
             Fleet.init 0 (vector x y) ( game.nextId, game.seed )
     in
         { game
-        | nextId = game.nextId
-        , fleets = fleet :: game.fleets
+        | nextId = nextId
         , seed = seed
+        , fleets = fleet :: game.fleets
         }
 
 
