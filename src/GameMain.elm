@@ -33,11 +33,11 @@ type Message
 addFleet : Float -> Float -> Game -> Game
 addFleet x y game =
     let
-        ( fleet, seed ) =
-            Fleet.init game.nextId 0 (vector x y) game.seed
+        ( fleet, nextId, seed ) =
+            Fleet.init 0 (vector x y) ( game.nextId, game.seed )
     in
         { game
-        | nextId = game.nextId + 1
+        | nextId = game.nextId
         , fleets = fleet :: game.fleets
         , seed = seed
         }

@@ -9,10 +9,9 @@ import Random.Pcg as Random
 import GameCommon as G exposing
     ( Game
     , GameEffect
+    , Id
     , Fleet
     , Ship
-    , EmpireId
-    , FleetId
     , Vector
     , vector
     , starSystemOuterRadius
@@ -47,6 +46,11 @@ noEffect fleet =
     ( fleet, [] )
 
 
+iterate : Int -> (a -> a) -> a -> a
+iterate times function init =
+    if times < 1
+    then init
+    else iterate (times - 1) function (function init)
 
 
 
@@ -56,22 +60,33 @@ noEffect fleet =
 -- INIT
 
 
-init : Int -> Int -> Vector -> Random.Seed -> ( Fleet, Random.Seed )
-init id empireId position seed =
+init : Id -> Vector -> ( Id, Random.Seed ) -> ( Fleet, Id, Random.Seed )
+init empireId position ( nextId0, seed0 ) =
     let
         formationDirection =
             V.normalize <| V.negate position
 
-        -- TODO: assign a proper id to ships
-        shipsGen =
-            Names.ship
-            |> Random.map (\name -> Ship 0 name position position 0 False)
-            |> Random.list 2
+        generateShip (ships, id, oldSeed) =
+            let
+                (name, newSeed) =
+                    Random.step Names.ship oldSeed
+            in
+                ( Ship id name position position 0 False :: ships
+                , id + 1
+                , newSeed
+                )
 
-        ( ships, newSeed ) =
-            Random.step shipsGen seed
+        (ships, nextId1, seed1) =
+            iterate 2 generateShip ([], nextId0, seed0)
+
+        (fleetId, nextId2) =
+            (nextId1, nextId1 + 1)
+
+        (fleetName, seed2) =
+            -- TODO: use a fleet name
+            Random.step Names.ship seed1
     in
-        ( Fleet id "" 0 ships formationDirection position [], newSeed )
+        ( Fleet fleetId fleetName 0 ships formationDirection position [], nextId2, seed2 )
 
 
 
