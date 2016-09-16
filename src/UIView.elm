@@ -19,7 +19,6 @@ import FleetView
 
 
 
-
 menuShip fleet ship =
     H.div
         []
@@ -34,17 +33,12 @@ menuShip fleet ship =
 
 
 
-
-
-
 menuFleet fleet =
     H.div
         []
         [ H.text fleet.name
-        , H.div [] <| List.map (menuShip fleet) fleet.ships
+        , H.div [ HA.class "selection-ship" ] <| List.map (menuShip fleet) fleet.ships
         ]
-
-
 
 
 
@@ -57,14 +51,7 @@ selectionMenu viewerPlayerId game ui =
                     List.filterMap (G.mapId game.fleets) ui.selectedIds
             in
                 H.div
-                    [ HA.style
-                        [ ( "position", "absolute" )
-                        , ( "bottom", "0.5%" )
-                        , ( "left", "0.5%" )
-                        , ( "border", "1px solid black" )
-                        , ( "width", "35%" )
-                        ]
-                    ]
+                    [ HA.class "selection-fleet" ]
                     (List.map menuFleet selectedFleets)
 
 
@@ -72,15 +59,8 @@ selectionMenu viewerPlayerId game ui =
 
 starSystemBox viewerPlayerId game ui =
     H.div
-        [ HA.style
-            [ ( "position", "absolute" )
-            , ( "top", "50%" )
-            , ( "left", "50%" )
-            , ( "transform", "translateX(-50%) translateY(-50%)" )
-            ]
-        ]
-        [ StarSystemView.view viewerPlayerId game ui
-        ]
+        [ HA.class "star-system-container" ]
+        [ StarSystemView.view viewerPlayerId game ui ]
 
 
 
