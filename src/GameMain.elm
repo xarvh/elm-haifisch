@@ -1,6 +1,9 @@
 module GameMain exposing (..)
 
+
 import FleetGame as Fleet
+import Random.Pcg as Random
+
 
 import GameCommon as G exposing
     ( Game
@@ -30,11 +33,12 @@ type Message
 addFleet : Float -> Float -> Game -> Game
 addFleet x y game =
     let
-        fleet =
-            Fleet.init game.nextId 0 (vector x y)
+        ( fleet, nextId, seed ) =
+            Fleet.init 0 (vector x y) ( game.nextId, game.seed )
     in
         { game
-        | nextId = game.nextId + 1
+        | nextId = nextId
+        , seed = seed
         , fleets = fleet :: game.fleets
         }
 
@@ -42,8 +46,8 @@ addFleet x y game =
 
 
 
-init =
-    Game 1 [] [] 0 False
+init seed =
+    Game 1 [] [] 0 False (Random.initialSeed seed)
     |> addFleet (1/2) (1/2)
     |> addFleet (1/3) (1/3)
     |> addFleet (1/2) (1/3)

@@ -3,6 +3,7 @@ module GameCommon exposing (..)
 
 import Math.Vector2 as V
 import List.Extra
+import Random.Pcg as Random
 
 
 -- IDs
@@ -11,6 +12,7 @@ import List.Extra
 type alias Id = Int
 type alias EmpireId = Id
 type alias FleetId = Id
+type alias ShipId = Id
 
 
 
@@ -29,7 +31,9 @@ type alias Empire =
 
 
 type alias Ship =
-    { currentPosition : Vector
+    { id : ShipId
+    , name : String
+    , currentPosition : Vector
     , targetPosition : Vector
     , angle : Float
     , isThrusting : Bool
@@ -39,6 +43,7 @@ type alias Ship =
 
 type alias Fleet =
     { id : FleetId
+    , name : String
     , empireId : EmpireId
 
     , ships : List Ship
@@ -64,6 +69,7 @@ type alias Game =
     , fleets : List Fleet
     , ticksSinceStart : Int
     , pause : Bool
+    , seed : Random.Seed
     }
 
 

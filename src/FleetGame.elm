@@ -2,14 +2,16 @@ module FleetGame exposing (..)
 
 
 import Math.Vector2 as V
+import Names
+import Random.Pcg as Random
+
 
 import GameCommon as G exposing
     ( Game
     , GameEffect
+    , Id
     , Fleet
     , Ship
-    , EmpireId
-    , FleetId
     , Vector
     , vector
     , starSystemOuterRadius
@@ -44,6 +46,11 @@ noEffect fleet =
     ( fleet, [] )
 
 
+iterate : Int -> (a -> a) -> a -> a
+iterate times function init =
+    if times < 1
+    then init
+    else iterate (times - 1) function (function init)
 
 
 
@@ -53,15 +60,32 @@ noEffect fleet =
 -- INIT
 
 
-init id empireId position =
+init : Id -> Vector -> ( Id, Random.Seed ) -> ( Fleet, Id, Random.Seed )
+init empireId position ( nextId0, seed0 ) =
     let
         formationDirection =
             V.normalize <| V.negate position
 
-        ship =
-            Ship position position 0 False
+        generateShip (ships, id, oldSeed) =
+            let
+                (name, newSeed) =
+                    Random.step Names.ship oldSeed
+            in
+                ( Ship id name position position 0 False :: ships
+                , id + 1
+                , newSeed
+                )
+
+        (ships, nextId1, seed1) =
+            iterate 2 generateShip ([], nextId0, seed0)
+
+        (fleetId, nextId2) =
+            (nextId1, nextId1 + 1)
+
+        (fleetName, seed2) =
+            Random.step Names.fleet seed1
     in
-        Fleet id 0 (List.repeat 2 ship) formationDirection position []
+        ( Fleet fleetId fleetName 0 ships formationDirection position [], nextId2, seed2 )
 
 
 
