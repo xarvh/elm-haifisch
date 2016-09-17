@@ -7,7 +7,7 @@
 }
 
 
-.selection-fleet {
+.selection-fleets-list {
     position: absolute;
     bottom: 0.5%;
     left: 0.5%;
@@ -16,5 +16,33 @@
 }
 
 
-.selection-ship {
+.selection-fleet {
+    background-color: lightgreen;
+    margin: 0.5vh;
 }
+
+.selection-fleet .fleet-name {
+    margin: 0.6vh;
+    background-color: green;
+    color: lightgreen;
+}
+
+
+.selection-ships-list {
+}
+
+
+.selection-ship {
+    display: flex;
+    align-items: center;
+}
+
+.selection-ship .ship-name {
+    color: green;
+    margin-left: 0.5vh;
+}
+
+
+
+
+

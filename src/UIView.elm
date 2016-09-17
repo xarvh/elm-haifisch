@@ -21,23 +21,23 @@ import FleetView
 
 menuShip fleet ship =
     H.div
-        []
+        [ HA.class "selection-ship" ]
         [ Svg.svg
             [ SA.width "8vh"
             , SA.height "8vh"
             , SA.viewBox "-1 -1 2 2"
             ]
             [ FleetView.shipSvg False ship ]
-        , H.text ship.name
+        , H.span [ HA.class "ship-name" ] [ H.text ship.name ]
         ]
 
 
 
 menuFleet fleet =
     H.div
-        []
-        [ H.text fleet.name
-        , H.div [ HA.class "selection-ship" ] <| List.map (menuShip fleet) fleet.ships
+        [ HA.class "selection-fleet" ]
+        [ H.div [ HA.class "fleet-name" ] [ H.text fleet.name ]
+        , H.div [ HA.class "selection-ships-list" ] <| List.map (menuShip fleet) fleet.ships
         ]
 
 
@@ -51,7 +51,7 @@ selectionMenu viewerPlayerId game ui =
                     List.filterMap (G.mapId game.fleets) ui.selectedIds
             in
                 H.div
-                    [ HA.class "selection-fleet" ]
+                    [ HA.class "selection-fleets-list" ]
                     (List.map menuFleet selectedFleets)
 
 

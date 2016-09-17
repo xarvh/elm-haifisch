@@ -24,4 +24,5 @@ git commit -m Publish
 git push -f origin gh-pages
 
 git checkout $CURRENT_BRANCH
+$BUILD
 
