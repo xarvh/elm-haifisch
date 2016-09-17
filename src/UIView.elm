@@ -36,7 +36,17 @@ menuShip fleet ship =
 menuFleet fleet =
     H.div
         [ HA.class "selection-fleet" ]
-        [ H.div [ HA.class "fleet-name" ] [ H.text fleet.name ]
+        [ H.div
+            [ HA.class "fleet-header" ]
+            [ H.span
+                [ HA.class "fleet-name" ]
+                [ H.text fleet.name ]
+            , H.button
+                []
+                [ H.text "split" ]
+            ]
+
+
         , H.div [ HA.class "selection-ships-list" ] <| List.map (menuShip fleet) fleet.ships
         ]
 

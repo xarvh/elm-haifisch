@@ -46,7 +46,6 @@ end
 properNoun
     {ini}{end}
     {ini}{mid}{end}
-    {ini}{mid}{mid}{end}
 
 adverb
     always,inevitably,necessarily,surely,inescapably,assuredly
@@ -90,13 +89,12 @@ exalted
 ship
     {noun}
     {genericAdjective} {properNoun}
+    {properNoun}
     {color} {properNoun}
     {genericAdjective} {noun}
     {color} {noun}
     {superlativeAdjective}
     {exalted}
-    {exalted}
-    {superlativeAdjective} {properNoun}
 
 fleet
     {color} Fleet

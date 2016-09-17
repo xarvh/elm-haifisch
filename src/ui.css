@@ -21,10 +21,14 @@
     margin: 0.5vh;
 }
 
-.selection-fleet .fleet-name {
-    margin: 0.6vh;
+.selection-fleet .fleet-header {
     background-color: green;
     color: lightgreen;
+    display: flex;
+    justify-content: space-between;
+}
+.fleet-header .fleet-name {
+    margin: 0.5vh;
 }
 
 
