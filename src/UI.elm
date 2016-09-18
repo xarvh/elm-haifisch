@@ -281,7 +281,7 @@ update game message model =
                         let
                             newModel = { model | splittingFleet = Nothing }
                             -- TODO: send command to split fleet
-                            cmd = if Set.isEmpty shipIds then [] else []
+                            cmd = if Set.isEmpty shipIds then [] else [ G.FleetSplit clickedFleetId (Set.toList shipIds) ]
                         in
                             ( newModel, cmd )
 

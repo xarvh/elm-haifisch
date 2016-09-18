@@ -95,6 +95,7 @@ type FleetCommand
 
 type Command
     = FleetCommand (List FleetId) QueueMode FleetCommand
+    | FleetSplit FleetId (List ShipId)
     | TogglePause
 
 

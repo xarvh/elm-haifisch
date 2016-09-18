@@ -3,6 +3,7 @@ module GameMain exposing (..)
 
 import FleetGame as Fleet
 import Random.Pcg as Random
+import Names
 
 
 import GameCommon as G exposing
@@ -85,6 +86,37 @@ executeEffect effect oldGame =
             |> Maybe.withDefault oldGame
 
 
+splitFleet fleetId shipIds oldGame =
+    case G.findId fleetId oldGame.fleets of
+        Nothing -> oldGame
+        Just oldRemainingFleet ->
+            case List.partition (\{id} -> List.member id shipIds) oldRemainingFleet.ships of
+                ( [], _ ) -> oldGame
+                ( _, [] ) -> oldGame
+                ( leavingShips, remainingShips ) ->
+                    let
+                        ( leavingFleetName, seed0 ) =
+                            Random.step Names.fleet oldGame.seed
+
+                        ( leavingFleetId, nextId0 ) =
+                            ( oldGame.nextId, oldGame.nextId + 1 )
+
+                        newRemainingFleet =
+                            { oldRemainingFleet
+                            | ships = remainingShips
+                            }
+
+                        newLeavingFleet =
+                            { oldRemainingFleet
+                            | id = leavingFleetId
+                            , name = leavingFleetName
+                            , ships = leavingShips
+                            }
+
+                        newFleets =
+                            newRemainingFleet :: newLeavingFleet :: List.filter (\{id} -> id /= oldRemainingFleet.id) oldGame.fleets
+                    in
+                        { oldGame | nextId = nextId0, seed = seed0, fleets = newFleets }
 
 
 
@@ -138,6 +170,9 @@ update message model =
                             else { fleet | commands = updateCommands fleet.commands }
                     in
                         { model | fleets = List.map mapFleet model.fleets }
+
+                G.FleetSplit fleetId shipIds ->
+                    splitFleet fleetId shipIds model
 
                 G.TogglePause ->
                     { model | pause = not model.pause }
