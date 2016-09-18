@@ -10,8 +10,7 @@ import Html.App
 
 import GameCommon exposing (Game, Command, EmpireId)
 import GameMain
-import UI
-import UIView
+import UiMain
 
 
 
@@ -28,14 +27,14 @@ granularity =
 
 type alias Model =
     { game : Game
-    , ui : UI.Model
+    , ui : UiMain.Model
     , currentPlayerId : EmpireId
     }
 
 
 
 init seed =
-    ( Model (GameMain.init seed) UI.init 0
+    ( Model (GameMain.init seed) UiMain.init 0
     , Cmd.none
     )
 
@@ -55,7 +54,7 @@ type ServerMessage =
 type Msg
     = Noop
     | Tick
-    | ToUiMessage UI.Msg
+    | ToUiMainMsg UiMain.Msg
     | ReceiveFromServer ServerMessage
 
 
@@ -101,7 +100,7 @@ updateGameAndUi command model =
             GameMain.update command model.game
 
         newUi =
-            List.foldl UI.updateForNotification model.ui notifications
+            List.foldl UiMain.updateForNotification model.ui notifications
     in
         noCmd { model | game = newGame, ui = newUi }
 
@@ -125,10 +124,10 @@ update msg model =
                     updateGameAndUi (GameMain.EmpireCommands empireId command) model
 
 
-        ToUiMessage uiMessage ->
+        ToUiMainMsg nestedMsg ->
             let
                 ( newUiModel, commands ) =
-                    UI.update model.game uiMessage model.ui
+                    UiMain.update nestedMsg model.game model.ui
 
                 cmd =
                     if List.length commands == 0
@@ -141,12 +140,12 @@ update msg model =
 
 
 view model =
-    Html.App.map ToUiMessage <| UIView.view model.currentPlayerId model.game model.ui
+    Html.App.map ToUiMainMsg <| UiMain.view model.currentPlayerId model.game model.ui
 
 
 
 subscriptions model =
     Sub.batch
         [ Time.every granularity (always Tick)
-        , Sub.map ToUiMessage UI.subscriptions
+        , Sub.map ToUiMainMsg UiMain.subscriptions
         ]

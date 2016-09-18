@@ -4,6 +4,7 @@ module GameCommon exposing (..)
 import Math.Vector2 as V
 import List.Extra
 import Random.Pcg as Random
+import Set
 
 
 -- IDs
@@ -172,5 +173,11 @@ normalizeBox a b =
 findId id =
     List.Extra.find (\item -> item.id == id)
 
+-- Used to get from a list of ids to a list of items
+-- `List.filterMap (G.mapId game.fleets) ui.selectedIds`
 mapId =
     flip findId
+
+
+selectedFleets selectedIds =
+    List.filter (\item -> Set.member item.id selectedIds)

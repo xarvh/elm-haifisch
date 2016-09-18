@@ -1,11 +1,10 @@
 module FleetView exposing (..)
 
 
-import GameCommon as G exposing ( Id, Fleet, Ship )
+-- import GameCommon as G exposing ( Id, Fleet, Ship )
 import String
 import Svg
 import Svg.Attributes as A
-import UI
 
 
 
@@ -31,24 +30,3 @@ shipSvg isSelected ship =
 
 
 
-shipView : Bool -> Id -> Ship -> Svg.Svg UI.Msg
-shipView isSelected fleetId ship =
-    let
-        size =
-            0.05
-    in
-        Svg.g
-            [   A.transform <| String.join " " <|
-                    [ "translate(" ++ G.vectorToString ship.currentPosition ++ ")"
-                    , "scale(" ++ toString size ++ ")"
-                    ]
-
-            , UI.onEventCooked "mousedown" UI.StarSystemMouseMove
-            , UI.onEventCooked "mouseup" (UI.UserClicksFleet fleetId)
-            ]
-            [ shipSvg isSelected ship ]
-
-
-view : Bool -> Fleet -> List (Svg.Svg UI.Msg)
-view isSelected fleet =
-    List.map (shipView isSelected fleet.id) fleet.ships
