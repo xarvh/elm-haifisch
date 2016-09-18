@@ -90,22 +90,22 @@ sendToServer commands =
 
 
 
-
-
-
-
-
-
-
-
-
 noCmd model =
     ( model, Cmd.none )
 
 
 
-updateGame command model =
-    noCmd <| { model | game = GameMain.update command model.game }
+updateGameAndUi command model =
+    let
+        ( newGame, notifications ) =
+            GameMain.update command model.game
+
+        newUi =
+            List.foldl UI.updateForNotification model.ui notifications
+    in
+        noCmd { model | game = newGame, ui = newUi }
+
+
 
 
 
@@ -116,13 +116,14 @@ update msg model =
             noCmd model
 
         Tick ->
-            updateGame GameMain.Tick model
+            updateGameAndUi GameMain.Tick model
 
 
         ReceiveFromServer serverMessage ->
             case serverMessage of
                 GameCommand empireId command ->
-                    updateGame (GameMain.EmpireCommands empireId command) model
+                    updateGameAndUi (GameMain.EmpireCommands empireId command) model
+
 
         ToUiMessage uiMessage ->
             let

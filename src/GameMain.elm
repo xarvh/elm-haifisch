@@ -88,11 +88,11 @@ executeEffect effect oldGame =
 
 splitFleet fleetId shipIds oldGame =
     case G.findId fleetId oldGame.fleets of
-        Nothing -> oldGame
+        Nothing -> noNote oldGame
         Just oldRemainingFleet ->
             case List.partition (\{id} -> List.member id shipIds) oldRemainingFleet.ships of
-                ( [], _ ) -> oldGame
-                ( _, [] ) -> oldGame
+                ( [], _ ) -> noNote oldGame
+                ( _, [] ) -> noNote oldGame
                 ( leavingShips, remainingShips ) ->
                     let
                         ( leavingFleetName, seed0 ) =
@@ -116,7 +116,7 @@ splitFleet fleetId shipIds oldGame =
                         newFleets =
                             newRemainingFleet :: newLeavingFleet :: List.filter (\{id} -> id /= oldRemainingFleet.id) oldGame.fleets
                     in
-                        { oldGame | nextId = nextId0, seed = seed0, fleets = newFleets }
+                        ( { oldGame | nextId = nextId0, seed = seed0, fleets = newFleets }, [ G.FleetHasSplit fleetId leavingFleetId ] )
 
 
 
@@ -148,12 +148,16 @@ tick oldGame =
 
 -- UPDATE
 
+noNote model =
+    ( model, [] )
 
-update : Message -> Game -> Game
+
+update : Message -> Game -> ( Game, List G.Notification )
 update message model =
     case message of
+
         Tick ->
-            if model.pause then model else tick model
+            noNote <| if model.pause then model else tick model
 
         EmpireCommands empireId command ->
             case command of
@@ -169,10 +173,10 @@ update message model =
                             then fleet
                             else { fleet | commands = updateCommands fleet.commands }
                     in
-                        { model | fleets = List.map mapFleet model.fleets }
+                        noNote { model | fleets = List.map mapFleet model.fleets }
 
                 G.FleetSplit fleetId shipIds ->
                     splitFleet fleetId shipIds model
 
                 G.TogglePause ->
-                    { model | pause = not model.pause }
+                    noNote { model | pause = not model.pause }

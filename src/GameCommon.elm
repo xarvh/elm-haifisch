@@ -107,6 +107,17 @@ starSystemOuterRadius =
 
 
 
+-- NOTIFICATIONS
+
+
+type Notification
+    = FleetHasSplit Id Id -- originalFleetId newFleetId
+
+
+
+
+
+
 {- EFFECTS
 
  When a tick elapses, game components (so far only Fleets) can update their own model

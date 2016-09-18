@@ -292,6 +292,18 @@ update game message model =
                     { model | splittingFleet = Just ( fId, (if Set.member shipId shipIds then Set.remove else Set.insert) shipId shipIds ) }
 
 
+
+-- NOTIFICATIONS
+
+
+updateForNotification : G.Notification -> Model -> Model
+updateForNotification notification model =
+    case notification of
+        G.FleetHasSplit originalFleetId newFleetId ->
+            { model | selectedIds = newFleetId :: model.selectedIds }
+
+
+
 -- SUBS
 
 
