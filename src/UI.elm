@@ -4,6 +4,7 @@ module UI exposing (..)
 import GameCommon as G exposing
     ( Game
     , Vector
+    , Id
     , vector
     , starSystemOuterRadius
     , normalizeBox
@@ -16,6 +17,7 @@ import Html.Events
 import Json.Decode as Json exposing ((:=))
 import Keyboard
 import SvgMouse
+import Set
 
 import Math.Vector2 as V
 
@@ -47,6 +49,9 @@ type alias Model =
     , selectionBox : Maybe Vector
     , starSystemMousePosition : Vector
 
+    -- Just fleetId, idOfShipsToBeExtracted
+    , splittingFleet : Maybe (Id, Set.Set Id)
+
     , ctrl : Bool
     , shift : Bool
     }
@@ -58,6 +63,7 @@ init =
     , selectedIds = [1..99]
     , selectionBox = Nothing
     , starSystemMousePosition = vector 0 0
+    , splittingFleet = Nothing
     , ctrl = False
     , shift = False
     }
@@ -238,6 +244,9 @@ type Msg
     | KeyPress Keyboard.KeyCode
     | KeyRelease Keyboard.KeyCode
 
+    | UserClicksFleetSplit Id
+    | UserClicksShipSplit Id
+
 
 
 update : Game -> Msg -> Model -> (Model, List Command)
@@ -261,6 +270,26 @@ update game message model =
 
         UserClicksFleet fleetId button pos ->
             noCmd <| select FleetSelection [fleetId] model
+
+        UserClicksFleetSplit clickedFleetId ->
+            case Maybe.withDefault (-1, Set.empty) model.splittingFleet of
+                ( selectedFleetId, shipIds ) ->
+                    if selectedFleetId /= clickedFleetId
+                    then
+                        noCmd { model | splittingFleet = Just (clickedFleetId, Set.empty) }
+                    else
+                        let
+                            newModel = { model | splittingFleet = Nothing }
+                            -- TODO: send command to split fleet
+                            cmd = if Set.isEmpty shipIds then [] else []
+                        in
+                            ( newModel, cmd )
+
+        UserClicksShipSplit shipId ->
+            noCmd <| case model.splittingFleet of
+                Nothing -> model
+                Just ( fId, shipIds ) ->
+                    { model | splittingFleet = Just ( fId, (if Set.member shipId shipIds then Set.remove else Set.insert) shipId shipIds ) }
 
 
 -- SUBS
