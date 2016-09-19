@@ -1,25 +1,23 @@
 module GameMain exposing (..)
 
-
 import FleetGame as Fleet
 import Random.Pcg as Random
 import Names
-
-
-import GameCommon as G exposing
-    ( Game
-    , Empire, EmpireId
-    , Fleet, FleetId
-    , Vector, vector
-    , Command
-    , GameEffect
-    )
-
+import GameCommon as G
+    exposing
+        ( Game
+        , Empire
+        , EmpireId
+        , Fleet
+        , FleetId
+        , Vector
+        , vector
+        , Command
+        , GameEffect
+        )
 
 
 -- TYPES
-
-
 
 
 type Message
@@ -28,9 +26,9 @@ type Message
 
 
 
-
-
 -- FUNCTIONS
+
+
 addFleet : Float -> Float -> Game -> Game
 addFleet x y game =
     let
@@ -38,24 +36,17 @@ addFleet x y game =
             Fleet.init 0 (vector x y) ( game.nextId, game.seed )
     in
         { game
-        | nextId = nextId
-        , seed = seed
-        , fleets = fleet :: game.fleets
+            | nextId = nextId
+            , seed = seed
+            , fleets = fleet :: game.fleets
         }
-
-
-
 
 
 init seed =
     Game 1 [] [] 0 False (Random.initialSeed seed)
-    |> addFleet (1/2) (1/2)
-    |> addFleet (1/3) (1/3)
-    |> addFleet (1/2) (1/3)
-
-
-
-
+        |> addFleet (1 / 2) (1 / 2)
+        |> addFleet (1 / 3) (1 / 3)
+        |> addFleet (1 / 2) (1 / 3)
 
 
 
@@ -68,12 +59,17 @@ mergeFleetEffect game disappearingFleet remainingFleet =
             { remainingFleet | ships = List.append remainingFleet.ships disappearingFleet.ships }
 
         foldFleets fleet fleets =
-            if fleet.id == disappearingFleet.id
-            then fleets
-            else (if fleet.id == newRemainingFleet.id then newRemainingFleet else fleet) :: fleets
+            if fleet.id == disappearingFleet.id then
+                fleets
+            else
+                (if fleet.id == newRemainingFleet.id then
+                    newRemainingFleet
+                 else
+                    fleet
+                )
+                    :: fleets
     in
         { game | fleets = List.foldr foldFleets [] game.fleets }
-
 
 
 executeEffect effect oldGame =
@@ -83,16 +79,22 @@ executeEffect effect oldGame =
                 (mergeFleetEffect oldGame)
                 (G.findId disappearingFleetId oldGame.fleets)
                 (G.findId remainingFleetId oldGame.fleets)
-            |> Maybe.withDefault oldGame
+                |> Maybe.withDefault oldGame
 
 
 splitFleet fleetId shipIds oldGame =
     case G.findId fleetId oldGame.fleets of
-        Nothing -> noNote oldGame
+        Nothing ->
+            noNote oldGame
+
         Just oldRemainingFleet ->
-            case List.partition (\{id} -> List.member id shipIds) oldRemainingFleet.ships of
-                ( [], _ ) -> noNote oldGame
-                ( _, [] ) -> noNote oldGame
+            case List.partition (\{ id } -> List.member id shipIds) oldRemainingFleet.ships of
+                ( [], _ ) ->
+                    noNote oldGame
+
+                ( _, [] ) ->
+                    noNote oldGame
+
                 ( leavingShips, remainingShips ) ->
                     let
                         ( leavingFleetName, seed0 ) =
@@ -103,18 +105,18 @@ splitFleet fleetId shipIds oldGame =
 
                         newRemainingFleet =
                             { oldRemainingFleet
-                            | ships = remainingShips
+                                | ships = remainingShips
                             }
 
                         newLeavingFleet =
                             { oldRemainingFleet
-                            | id = leavingFleetId
-                            , name = leavingFleetName
-                            , ships = leavingShips
+                                | id = leavingFleetId
+                                , name = leavingFleetName
+                                , ships = leavingShips
                             }
 
                         newFleets =
-                            newRemainingFleet :: newLeavingFleet :: List.filter (\{id} -> id /= oldRemainingFleet.id) oldGame.fleets
+                            newRemainingFleet :: newLeavingFleet :: List.filter (\{ id } -> id /= oldRemainingFleet.id) oldGame.fleets
                     in
                         ( { oldGame | nextId = nextId0, seed = seed0, fleets = newFleets }, [ G.FleetHasSplit fleetId leavingFleetId ] )
 
@@ -126,8 +128,8 @@ splitFleet fleetId shipIds oldGame =
 tick : Game -> Game
 tick oldGame =
     let
-        fleetFolder : Fleet -> (List Fleet, List GameEffect) -> ( List Fleet, List GameEffect )
-        fleetFolder fleet (fleets, effects) =
+        fleetFolder : Fleet -> ( List Fleet, List GameEffect ) -> ( List Fleet, List GameEffect )
+        fleetFolder fleet ( fleets, effects ) =
             let
                 ( newFleet, newEffects ) =
                     Fleet.tick oldGame fleet
@@ -135,18 +137,17 @@ tick oldGame =
                 ( newFleet :: fleets, List.append effects newEffects )
 
         ( newFleets, effects ) =
-            List.foldr fleetFolder ([], []) oldGame.fleets
-
+            List.foldr fleetFolder ( [], [] ) oldGame.fleets
 
         newGame =
             { oldGame | fleets = newFleets }
-
     in
         List.foldl executeEffect newGame effects
 
 
 
 -- UPDATE
+
 
 noNote model =
     ( model, [] )
@@ -155,9 +156,12 @@ noNote model =
 update : Message -> Game -> ( Game, List G.Notification )
 update message model =
     case message of
-
         Tick ->
-            noNote <| if model.pause then model else tick model
+            noNote <|
+                if model.pause then
+                    model
+                else
+                    tick model
 
         EmpireCommands empireId command ->
             case command of
@@ -165,13 +169,17 @@ update message model =
                     let
                         updateCommands cmds =
                             case queueMode of
-                                G.Append -> cmds ++ [fleetCommand]
-                                G.Replace -> [fleetCommand]
+                                G.Append ->
+                                    cmds ++ [ fleetCommand ]
+
+                                G.Replace ->
+                                    [ fleetCommand ]
 
                         mapFleet fleet =
-                            if fleet.empireId /= empireId || not (List.member fleet.id fleetIds)
-                            then fleet
-                            else { fleet | commands = updateCommands fleet.commands }
+                            if fleet.empireId /= empireId || not (List.member fleet.id fleetIds) then
+                                fleet
+                            else
+                                { fleet | commands = updateCommands fleet.commands }
                     in
                         noNote { model | fleets = List.map mapFleet model.fleets }
 

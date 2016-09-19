@@ -1,10 +1,7 @@
 module Names exposing (..)
 
-
-
 import LexicalRandom
 import Random.Pcg as Random
-
 
 
 defaultLexicon =
@@ -105,10 +102,12 @@ fleet
 
 generatorByKey key =
     LexicalRandom.generator defaultLexicon key
-    |> Random.map LexicalRandom.capitalize
+        |> Random.map LexicalRandom.capitalize
+
 
 ship =
     generatorByKey "ship"
+
 
 fleet =
     generatorByKey "fleet"

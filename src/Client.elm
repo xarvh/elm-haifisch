@@ -1,24 +1,19 @@
 module Client exposing (..)
 
-
-import Keyboard
 import Process
 import Task
 import Time
 import Html.App
-
-
 import GameCommon exposing (Game, Command, EmpireId)
 import GameMain
 import UiMain
 
 
-
-
 -- This is supposed to come from interpolating server and browser animationFrame
+
+
 granularity =
     Time.millisecond * 100
-
 
 
 
@@ -32,23 +27,14 @@ type alias Model =
     }
 
 
-
 init seed =
     ( Model (GameMain.init seed) UiMain.init 0
     , Cmd.none
     )
 
 
-
-
-type ServerMessage =
-    GameCommand EmpireId Command
-
-
-
-
-
-
+type ServerMessage
+    = GameCommand EmpireId Command
 
 
 type Msg
@@ -59,14 +45,11 @@ type Msg
 
 
 
-
-
-
-
-
 {- TODO
-    For now, just reroute straight back all commands, adding some lag
+   For now, just reroute straight back all commands, adding some lag
 -}
+
+
 sendToServer : List Command -> Cmd Msg
 sendToServer commands =
     let
@@ -81,17 +64,12 @@ sendToServer commands =
 
         commandToCmd command =
             Task.perform (tagger command) (tagger command) task
-
     in
         Cmd.batch <| List.map commandToCmd commands
 
 
-
-
-
 noCmd model =
     ( model, Cmd.none )
-
 
 
 updateGameAndUi command model =
@@ -105,24 +83,18 @@ updateGameAndUi command model =
         noCmd { model | game = newGame, ui = newUi }
 
 
-
-
-
 update msg model =
     case msg of
-
         Noop ->
             noCmd model
 
         Tick ->
             updateGameAndUi GameMain.Tick model
 
-
         ReceiveFromServer serverMessage ->
             case serverMessage of
                 GameCommand empireId command ->
                     updateGameAndUi (GameMain.EmpireCommands empireId command) model
-
 
         ToUiMainMsg nestedMsg ->
             let
@@ -130,18 +102,16 @@ update msg model =
                     UiMain.update nestedMsg model.game model.ui
 
                 cmd =
-                    if List.length commands == 0
-                    then Cmd.none
-                    else sendToServer commands
+                    if List.length commands == 0 then
+                        Cmd.none
+                    else
+                        sendToServer commands
             in
                 ( { model | ui = newUiModel }, cmd )
 
 
-
-
 view model =
     Html.App.map ToUiMainMsg <| UiMain.view model.currentPlayerId model.game model.ui
-
 
 
 subscriptions model =
