@@ -1,33 +1,38 @@
 module GameCommon exposing (..)
 
-
 import Math.Vector2 as V
 import List.Extra
 import Random.Pcg as Random
+import Set
 
 
 -- IDs
 
 
-type alias Id = Int
-type alias EmpireId = Id
-type alias FleetId = Id
-type alias ShipId = Id
+type alias Id =
+    Int
 
 
+type alias EmpireId =
+    Id
 
+
+type alias FleetId =
+    Id
+
+
+type alias ShipId =
+    Id
 
 
 
 -- MODELS
 
 
-
 type alias Empire =
     { id : EmpireId
     , name : String
     }
-
 
 
 type alias Ship =
@@ -40,27 +45,22 @@ type alias Ship =
     }
 
 
-
 type alias Fleet =
     { id : FleetId
     , name : String
     , empireId : EmpireId
-
-    , ships : List Ship
-
-    {- TODO
-    Position =
-        StarSystem starSystemId
-        InFTL starSystemId StarSystemId completion
-    -}
-
-    -- formationDirection is to be updated whenever formationTarget chagnes
+    , ships :
+        List Ship
+        {- TODO
+           Position =
+               StarSystem starSystemId
+               InFTL starSystemId StarSystemId completion
+        -}
+        -- formationDirection is to be updated whenever formationTarget chagnes
     , formationTarget : Vector
     , formationDirection : Vector
-
     , commands : List FleetCommand
     }
-
 
 
 type alias Game =
@@ -74,10 +74,6 @@ type alias Game =
 
 
 
-
-
-
-
 -- COMMANDS
 
 
@@ -86,11 +82,9 @@ type QueueMode
     | Replace
 
 
-
 type FleetCommand
     = ThrustTo Vector
     | MergeWith FleetId
-
 
 
 type Command
@@ -99,11 +93,13 @@ type Command
     | TogglePause
 
 
+
 -- This is the max distance a ship can be from a star outside FTL
+
+
 starSystemOuterRadius : Float
 starSystemOuterRadius =
     0.96
-
 
 
 
@@ -111,24 +107,22 @@ starSystemOuterRadius =
 
 
 type Notification
-    = FleetHasSplit Id Id -- originalFleetId newFleetId
+    = FleetHasSplit Id Id
 
 
 
-
-
-
+-- originalFleetId newFleetId
 {- EFFECTS
 
- When a tick elapses, game components (so far only Fleets) can update their own model
- but cannot directly touch any other model.
- Instead, their update/tick function will produce an Effect, which describes a side
- effect that a game component can produce in the game model
+   When a tick elapses, game components (so far only Fleets) can update their own model
+   but cannot directly touch any other model.
+   Instead, their update/tick function will produce an Effect, which describes a side
+   effect that a game component can produce in the game model
 -}
+
 
 type GameEffect
     = MergeFleets FleetId FleetId
-
 
 
 
@@ -138,8 +132,10 @@ type GameEffect
 type alias Vector =
     V.Vec2
 
+
 vector =
     V.vec2
+
 
 vectorToString : Vector -> String
 vectorToString v =
@@ -147,16 +143,22 @@ vectorToString v =
 
 
 
-
-
 -- GEOMETRY
+
 
 normalizeBox a b =
     let
-        ax = V.getX a
-        ay = V.getY a
-        bx = V.getX b
-        by = V.getY b
+        ax =
+            V.getX a
+
+        ay =
+            V.getY a
+
+        bx =
+            V.getX b
+
+        by =
+            V.getY b
     in
         ( min ax bx
         , min ay by
@@ -172,5 +174,15 @@ normalizeBox a b =
 findId id =
     List.Extra.find (\item -> item.id == id)
 
+
+
+-- Used to get from a list of ids to a list of items
+-- `List.filterMap (G.mapId game.fleets) ui.selectedIds`
+
+
 mapId =
     flip findId
+
+
+selectedFleets selectedIds =
+    List.filter (\item -> Set.member item.id selectedIds)
