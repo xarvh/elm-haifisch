@@ -339,22 +339,58 @@ star =
     Svg.circle
         [ A.cx "0"
         , A.cy "0"
-        , A.r "0.05"
-        , A.fill "#ff0"
+        , A.r "0.02"
+        , A.fill "#007"
+        , A.stroke "#00f"
+        , A.strokeWidth "0.002"
         ]
         []
 
+planet orbitRadius =
+    Svg.g
+        []
+        -- orbit
+        [ Svg.circle
+            [ A.cx "0"
+            , A.cy "0"
+            , A.r <| toString orbitRadius
+            , A.fill "none"
+            , A.stroke "#00f"
+            , A.strokeWidth "0.002"
+            ]
+            []
+        -- planet
+        , Svg.circle
+            [ A.cx <| toString orbitRadius
+            , A.cy "0"
+            , A.r "0.005"
+            , A.fill "#070"
+            , A.stroke "#0f0"
+            , A.strokeWidth "0.002"
+            ]
+            []
+        -- marker
+        , Svg.circle
+            [ A.cx <| toString orbitRadius
+            , A.cy "0"
+            , A.r "0.03"
+            , A.fill "none"
+            , A.stroke "#0f0"
+            , A.strokeWidth "0.003"
+            ]
+            []
+        ]
+
 
 outerWellMarker =
-    Svg.ellipse
+    Svg.circle
         [ A.cx "0"
         , A.cy "0"
-        , A.rx <| toString starSystemOuterRadius
-        , A.ry <| toString starSystemOuterRadius
+        , A.r <| toString starSystemOuterRadius
         , A.fill "none"
-        , A.stroke "#999"
-        , A.strokeWidth "0.01"
-        , A.strokeDasharray "6%, 6%"
+        , A.stroke "#007"
+        , A.strokeWidth "0.006"
+--         , A.strokeDasharray "6%, 6%"
         ]
         []
 
@@ -452,6 +488,7 @@ view asViewedByPlayerId game uiShared model =
     <|
         List.concat <|
             [ [ star ]
+            , [ planet <| starSystemOuterRadius / 3 ]
             , [ outerWellMarker ]
             , selectionBox model
             , (drawFleetCommandQueues asViewedByPlayerId uiShared game)

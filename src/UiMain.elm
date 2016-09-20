@@ -211,10 +211,7 @@ starSystemBox viewerPlayerId game model =
 view : Int -> Game -> Model -> H.Html Msg
 view viewerPlayerId game model =
     H.div
-        [ HA.style
-            [ ( "width", "100vw" )
-            , ( "height", "100vh" )
-            ]
+        [ HA.class "ui"
         ]
         [ starSystemBox viewerPlayerId game model
         , selectionMenu viewerPlayerId game model

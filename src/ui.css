@@ -1,3 +1,8 @@
+.ui {
+    width: 100vw;
+    height: 100vh;
+    background: black;
+}
 
 .star-system-container {
     position: absolute;
@@ -11,7 +16,7 @@
     position: absolute;
     bottom: 0.5%;
     left: 0.5%;
-    border: 1px solid black;
+    border: 1px solid white;
     width: 30%;
 }
 
