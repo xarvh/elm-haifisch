@@ -213,7 +213,7 @@ onEventCooked eventName tagger =
 
 
 
-----------------
+-- Fleet Commands Traces
 
 
 symbolDot pos =
@@ -227,15 +227,27 @@ symbolDot pos =
 
 
 symbolMerge pos =
-    Svg.circle
-        [ A.cx <| toString <| V.getX pos ]
-        []
+    Svg.g
+        [ A.transform <| "translate(" ++ G.vectorToString pos ++ ") scale(0.008)"
+        ]
+        [ Svg.polygon
+            [ A.points "-1,1  1,1  1,-1  -1,-1"
+            , A.fill "#0db"
+            ]
+            []
+        ]
 
 
 symbolAttack pos =
-    Svg.circle
-        [ A.cx <| toString <| V.getX pos ]
-        []
+    Svg.g
+        [ A.transform <| "translate(" ++ G.vectorToString pos ++ ") scale(0.016)"
+        ]
+        [ Svg.polygon
+            [ A.points "0,0.43 -0.5,-0.5 0.5,-0.5"
+            , A.fill "#f00"
+            ]
+            []
+        ]
 
 
 fleetPosition fleetId game =
@@ -268,19 +280,22 @@ drawFleetCommand game start shipCommand =
         direction =
             V.scale (1 / length) difference
 
-        stepSize =
+        baseStepLength =
             0.025
 
         numberOfSteps =
-            round <| length / stepSize
+            round <| length / baseStepLength
+
+        actualStepLength =
+            length / toFloat numberOfSteps
 
         position n =
             direction
-                |> V.scale (toFloat n * stepSize)
+                |> V.scale (toFloat n * actualStepLength)
                 |> V.sub end
 
         symbols =
-            List.map (position >> symbol) [0..numberOfSteps-1]
+            List.map (position >> symbol) [0..numberOfSteps - 1]
     in
         ( end, symbols )
 
