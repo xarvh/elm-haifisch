@@ -12,7 +12,7 @@
     bottom: 0.5%;
     left: 0.5%;
     border: 1px solid black;
-    width: 35%;
+    width: 30%;
 }
 
 
@@ -47,6 +47,7 @@
 }
 
 
-
-
-
+.info-box {
+    position: absolute;
+    right: 2vh;
+}

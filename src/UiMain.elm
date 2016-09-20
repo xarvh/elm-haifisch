@@ -174,6 +174,21 @@ updateForNotification notification model =
 -- This gives info on whatever is selected
 
 
+infoBox : H.Html Msg
+infoBox =
+    H.div
+        [ HA.class "info-box" ]
+        [ H.ul [] <|
+            List.map
+                (\s -> H.li [] [ H.text s ])
+                [ "Mouse left: select fleet / marking box"
+                , "Mouse right: move / attack (not implemented)"
+                , "M: merge selected fleets"
+                , "Hold Shift to queue commands"
+                ]
+        ]
+
+
 selectionMenu : Id -> G.Game -> Model -> H.Html Msg
 selectionMenu viewerPlayerId game model =
     case model.selection of
@@ -203,6 +218,7 @@ view viewerPlayerId game model =
         ]
         [ starSystemBox viewerPlayerId game model
         , selectionMenu viewerPlayerId game model
+        , infoBox
         ]
 
 
