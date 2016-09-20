@@ -1,5 +1,6 @@
 module FleetGame exposing (..)
 
+import Dict
 import Math.Vector2 as V
 import Names
 import Random.Pcg as Random
@@ -80,7 +81,7 @@ init empireId position ( nextId0, seed0 ) =
         ( fleetName, seed2 ) =
             Random.step Names.fleet seed1
     in
-        ( Fleet fleetId fleetName 0 ships formationDirection position [], nextId2, seed2 )
+        ( Fleet fleetId fleetName empireId ships formationDirection position [], nextId2, seed2 )
 
 
 idleBehavior fleet =
@@ -233,7 +234,7 @@ thrustToBehavior targetPosition oldFleet =
 
 mergeWithBehavior : Game -> Int -> Fleet -> ( Fleet, List GameEffect )
 mergeWithBehavior game targetFleetId oldFleet =
-    case G.findId targetFleetId game.fleets of
+    case Dict.get targetFleetId game.fleets of
         Nothing ->
             noEffect <| popCommand oldFleet
 
@@ -254,6 +255,16 @@ mergeWithBehavior game targetFleetId oldFleet =
                 ( updateCommands oldFleet, effects )
 
 
+
+attackBehavior : Game -> Int -> Fleet -> ( Fleet, List GameEffect )
+attackBehavior game targetFleetId oldFleet =
+    -- TODO: actually attack!
+    (oldFleet, [] )
+
+
+
+
+
 tick : Game -> Fleet -> ( Fleet, List GameEffect )
 tick game fleet =
     case List.head fleet.commands of
@@ -264,6 +275,9 @@ tick game fleet =
             case command of
                 G.ThrustTo targetPosition ->
                     noEffect <| thrustToBehavior targetPosition fleet
+
+                G.Attack targetFleetId ->
+                    attackBehavior game targetFleetId fleet
 
                 G.MergeWith targetFleetId ->
                     mergeWithBehavior game targetFleetId fleet

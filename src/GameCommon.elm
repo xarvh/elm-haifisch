@@ -1,9 +1,10 @@
 module GameCommon exposing (..)
 
+import Dict exposing (Dict)
 import Math.Vector2 as V
 import List.Extra
 import Random.Pcg as Random
-import Set
+import Set exposing (Set)
 
 
 -- IDs
@@ -23,6 +24,14 @@ type alias FleetId =
 
 type alias ShipId =
     Id
+
+
+
+-- Dictionaries
+
+
+type alias FleetDict =
+    Dict FleetId Fleet
 
 
 
@@ -51,22 +60,19 @@ type alias Fleet =
     , empireId : EmpireId
     , ships :
         List Ship
-        {- TODO
-           Position =
-               StarSystem starSystemId
-               InFTL starSystemId StarSystemId completion
-        -}
         -- formationDirection is to be updated whenever formationTarget chagnes
     , formationTarget : Vector
     , formationDirection : Vector
-    , commands : List FleetCommand
+    , commands :
+        List FleetCommand
+        -- TODO Add `Position = StarSystem starSystemId | InFTL starSystemId StarSystemId completion`
     }
 
 
 type alias Game =
     { nextId : Id
-    , empires : List Empire
-    , fleets : List Fleet
+    , empires : Dict EmpireId Empire
+    , fleets : FleetDict
     , ticksSinceStart : Int
     , pause : Bool
     , seed : Random.Seed
@@ -84,12 +90,13 @@ type QueueMode
 
 type FleetCommand
     = ThrustTo Vector
+    | Attack FleetId
     | MergeWith FleetId
 
 
 type Command
-    = FleetCommand (List FleetId) QueueMode FleetCommand
-    | FleetSplit FleetId (List ShipId)
+    = FleetCommand (Set FleetId) QueueMode FleetCommand
+    | FleetSplit FleetId (Set ShipId)
     | TogglePause
 
 
@@ -171,18 +178,11 @@ normalizeBox a b =
 -- HELPERS
 
 
-findId id =
-    List.Extra.find (\item -> item.id == id)
-
-
-
--- Used to get from a list of ids to a list of items
--- `List.filterMap (G.mapId game.fleets) ui.selectedIds`
-
-
-mapId =
-    flip findId
-
-
+selectedFleets : Set FleetId -> FleetDict -> FleetDict
 selectedFleets selectedIds =
-    List.filter (\item -> Set.member item.id selectedIds)
+    Dict.filter <| \id fleet -> Set.member id selectedIds
+
+
+updateFleet : Fleet -> FleetDict -> FleetDict
+updateFleet fleet fleets =
+    Dict.insert fleet.id fleet fleets

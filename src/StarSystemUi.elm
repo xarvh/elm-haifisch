@@ -1,8 +1,11 @@
 module StarSystemUi exposing (..)
 
+import Dict
 import GameCommon as G
     exposing
         ( Game
+        , Id
+        , Fleet
         , starSystemOuterRadius
         , vectorToString
         , normalizeBox
@@ -19,6 +22,11 @@ import Svg.Attributes as A
 import SvgMouse
 import String
 import UiCommon as Ui
+
+
+type alias Svg =
+    Svg.Svg Msg
+
 
 
 -- MODEL
@@ -54,11 +62,21 @@ update msg game uiShared model =
             manageMouse button Ui.MouseRelease game uiShared model
 
         UserClicksFleet fleetId button pos ->
-            select (Ui.FleetSelection <| Set.singleton fleetId) model
+            case button of
+                Ui.MouseRight ->
+                    ( model, uiShared.selection, targetFleetCommand fleetId game uiShared )
+
+                _ ->
+                    select (Ui.FleetSelection <| Set.singleton fleetId) model
 
 
 select selection model =
     ( { model | selectionBox = Nothing }, selection, [] )
+
+
+targetFleetCommand : G.Id -> Game -> Ui.UiShared a -> List G.Command
+targetFleetCommand targetFleetId game uiShared =
+    [ G.FleetCommand (Ui.fleetIds uiShared) (Ui.queueMode uiShared) (G.Attack targetFleetId) ]
 
 
 
@@ -128,23 +146,23 @@ boxSelection start end game =
                     && sy
                     <= y'
 
-        fm fleet =
+        folder id fleet set =
             if
                 List.any isInBox fleet.ships
                 --   && fleet.empireId == currentPlayerId
             then
-                Just fleet.id
+                Set.insert id set
             else
-                Nothing
+                set
 
-        fleets =
-            List.filterMap fm game.fleets
+        ids =
+            Dict.foldl folder Set.empty game.fleets
 
         selection =
-            if List.isEmpty fleets then
+            if Set.isEmpty ids then
                 Ui.NoSelection
             else
-                Ui.FleetSelection <| Set.fromList fleets
+                Ui.FleetSelection ids
     in
         selection
 
@@ -157,7 +175,7 @@ command game uiShared model =
                     []
 
                 Ui.FleetSelection fleetIds ->
-                    [ G.FleetCommand (Set.toList fleetIds) (Ui.queueMode uiShared) (G.ThrustTo model.mousePosition) ]
+                    [ G.FleetCommand fleetIds (Ui.queueMode uiShared) (G.ThrustTo model.mousePosition) ]
     in
         ( model, uiShared.selection, commands )
 
@@ -195,36 +213,102 @@ onEventCooked eventName tagger =
 
 
 
-----------------
+-- Fleet Commands Traces
 
 
-drawFleetCommand : G.Vector -> G.FleetCommand -> ( G.Vector, Svg.Svg a )
-drawFleetCommand start shipCommand =
-    case shipCommand of
-        G.ThrustTo end ->
-            ( end
-            , Svg.polyline
-                [ A.points <| vectorToString start ++ " " ++ vectorToString end
-                , A.fill "none"
-                , A.stroke "#0d0"
-                , A.strokeWidth "0.003"
-                ]
-                []
-            )
-
-        -- TODO: add MergeWith
-        _ ->
-            ( start, Svg.polyline [] [] )
+symbolDot pos =
+    Svg.circle
+        [ A.cx <| toString <| V.getX pos
+        , A.cy <| toString <| V.getY pos
+        , A.r "0.005"
+        , A.fill "#0b0"
+        ]
+        []
 
 
-drawFleetCommandQueue asViewedByPlayerId fleet =
+symbolMerge pos =
+    Svg.g
+        [ A.transform <| "translate(" ++ G.vectorToString pos ++ ") scale(0.008)"
+        ]
+        [ Svg.polygon
+            [ A.points "-1,1  1,1  1,-1  -1,-1"
+            , A.fill "#0db"
+            ]
+            []
+        ]
+
+
+symbolAttack pos =
+    Svg.g
+        [ A.transform <| "translate(" ++ G.vectorToString pos ++ ") scale(0.016)"
+        ]
+        [ Svg.polygon
+            [ A.points "0,0.43 -0.5,-0.5 0.5,-0.5"
+            , A.fill "#f00"
+            ]
+            []
+        ]
+
+
+fleetPosition fleetId game =
+    Dict.get fleetId game.fleets
+        |> (flip Maybe.andThen) (\fleet -> List.head fleet.ships)
+        |> Maybe.map .currentPosition
+        |> Maybe.withDefault (vector 0 0)
+
+
+drawFleetCommand : Game -> G.Vector -> G.FleetCommand -> ( G.Vector, List (Svg.Svg Msg) )
+drawFleetCommand game start shipCommand =
+    let
+        ( symbol, end ) =
+            case shipCommand of
+                G.ThrustTo end ->
+                    ( symbolDot, end )
+
+                G.MergeWith targetFleetId ->
+                    ( symbolMerge, fleetPosition targetFleetId game )
+
+                G.Attack targetFleetId ->
+                    ( symbolAttack, fleetPosition targetFleetId game )
+
+        difference =
+            V.sub end start
+
+        length =
+            V.length difference
+
+        direction =
+            V.scale (1 / length) difference
+
+        baseStepLength =
+            0.025
+
+        numberOfSteps =
+            round <| length / baseStepLength
+
+        actualStepLength =
+            length / toFloat numberOfSteps
+
+        position n =
+            direction
+                |> V.scale (toFloat n * actualStepLength)
+                |> V.sub end
+
+        symbols =
+            List.map (position >> symbol) [0..numberOfSteps - 1]
+    in
+        ( end, symbols )
+
+
+drawFleetCommandQueue : Id -> Game -> Fleet -> List Svg
+drawFleetCommandQueue asViewedByPlayerId game fleet =
     let
         folder fleetCommand ( start, svgs ) =
             let
-                ( end, svg ) =
-                    drawFleetCommand start fleetCommand
+                ( end, newSvgs ) =
+                    drawFleetCommand game start fleetCommand
             in
-                ( end, svg :: svgs )
+                ( end, List.append newSvgs svgs )
 
         start =
             List.head fleet.ships
@@ -237,11 +321,15 @@ drawFleetCommandQueue asViewedByPlayerId fleet =
         svgs
 
 
-drawFleetCommandQueues asViewedByPlayerId uiShared fleets =
+drawFleetCommandQueues : G.Id -> Ui.UiShared a -> Game -> List Svg
+drawFleetCommandQueues asViewedByPlayerId uiShared game =
     case uiShared.selection of
         Ui.FleetSelection ids ->
-            G.selectedFleets ids fleets
-                |> List.map (drawFleetCommandQueue asViewedByPlayerId)
+            G.selectedFleets ids game.fleets
+                |> Dict.filter (\id fleet -> fleet.empireId == asViewedByPlayerId)
+                |> Dict.values
+                |> List.map (drawFleetCommandQueue asViewedByPlayerId game)
+                |> List.concat
 
         _ ->
             []
@@ -303,8 +391,8 @@ selectionBox model =
                 [ rect ]
 
 
-shipView : Bool -> G.Id -> G.Ship -> Svg.Svg Msg
-shipView isSelected fleetId ship =
+shipView : Bool -> Bool -> G.Id -> G.Ship -> Svg.Svg Msg
+shipView isFriendly isSelected fleetId ship =
     let
         size =
             0.05
@@ -318,14 +406,15 @@ shipView isSelected fleetId ship =
             , onEventCooked "mousedown" MouseMove
             , onEventCooked "mouseup" (UserClicksFleet fleetId)
             ]
-            [ FleetView.shipSvg isSelected ship ]
+            [ FleetView.shipSvg isFriendly isSelected ship ]
 
 
-fleetView : Bool -> G.Fleet -> List (Svg.Svg Msg)
-fleetView isSelected fleet =
-    List.map (shipView isSelected fleet.id) fleet.ships
+fleetView : Bool -> Bool -> G.Fleet -> List (Svg.Svg Msg)
+fleetView isFriendly isSelected fleet =
+    List.map (shipView isFriendly isSelected fleet.id) fleet.ships
 
 
+drawFleets : G.Id -> Game -> Ui.UiShared a -> List Svg
 drawFleets asViewedByPlayerId game uiShared =
     let
         selectedIds =
@@ -336,11 +425,16 @@ drawFleets asViewedByPlayerId game uiShared =
                 _ ->
                     Set.empty
 
+        isFriendly fleet =
+            fleet.empireId == asViewedByPlayerId
+
         displayFleet fleet =
-            fleetView (Set.member fleet.id selectedIds) fleet
+            fleetView (isFriendly fleet) (Set.member fleet.id selectedIds) fleet
     in
         -- TODO display only fleets per asViewedByPlayerId
-        List.map displayFleet game.fleets
+        Dict.values game.fleets
+            |> List.map displayFleet
+            |> List.concat
 
 
 view : Int -> Game -> Ui.UiShared a -> Model -> Svg.Svg Msg
@@ -360,6 +454,6 @@ view asViewedByPlayerId game uiShared model =
             [ [ star ]
             , [ outerWellMarker ]
             , selectionBox model
+            , (drawFleetCommandQueues asViewedByPlayerId uiShared game)
+            , (drawFleets asViewedByPlayerId game uiShared)
             ]
-                ++ (drawFleets asViewedByPlayerId game uiShared)
-                ++ drawFleetCommandQueues asViewedByPlayerId uiShared game.fleets
