@@ -7,14 +7,44 @@ module LexicalRandom
         , fromString
         )
 
-{-
-   TODO it'd be awesome to allow the caller to pass a dictionary of additional
-   constants that can be referenced by a key, to let the lexicon access
-   words like the Empire's name or the Leader's name or the ship's class...
+{-|
 
-   TODO Try again to use
-   `generator : Lexicon -> String -> Generator (Result (List String) String)`
-   and make error results chainable.
+Generate random names based on a lexicon
+
+```
+import LexicalRandom
+
+
+lexiconString =
+    """
+streetType
+    street,road,avenue,drive,parade,square,plaza
+
+namePrefix
+    Georg,Smiths,Johns
+
+nameSuffix
+    chester,ington,ton,roy
+
+surname
+    {namePrefix}son
+    {namePrefix}{nameSuffix}
+
+address
+    {surname} {streetType}
+"""
+
+
+streetNamesLexicon =
+    LexicalRandom.fromString lexiconString
+
+streetNamesRandomGenerator : Random.Pcg.Generator String
+streetNamesRandomGenerator =
+    LexicalRandom.generator (\key -> "[missing key`" ++ key ++ "`]") streetNamesLexicon "address"
+```
+
+
+
 -}
 
 import Dict exposing (Dict)
@@ -39,16 +69,32 @@ type alias Lexicon =
     Dict String (List Definition)
 
 
+{-| Generate a name given a lexicon and a key of that lexicon
 
--- Generate a name given a lexicon and a key of that lexicon
+    `(String -> String)` is a filler function, called when some definition references a key
+    that does not exist in the lexicon.
+    It will be called with the missing key as argument, and its return value will be used
+    as key value.
+    This can be used, for example, to provide key values from a custom dictionary.
+
+    The filler function is also called to break possible infinite recursions caused by a keys.
 
 
-generator : Lexicon -> String -> Generator String
-generator lexicon key =
+    filler key =
+        Dict.get key customKeys |> Maybe.withDefault key
+
+    nameGenerator =
+        generator filler englishGibberishLexicon "properNoun"
+
+    ( name, seed ) =
+        Random.Pcg.step nameGenerator seed
+-}
+generator : (String -> String) -> Lexicon -> String -> Generator String
+generator filler lexicon key =
     case Dict.get key lexicon of
         Nothing ->
             -- either the key is plain invalid, or it is stuck in a loop
-            Random.constant <| "--[" ++ key ++ "]--"
+            Random.constant (filler key)
 
         Just definitions ->
             let
@@ -60,7 +106,7 @@ generator lexicon key =
                     Random.map2 (++) accumulatedGenerator <|
                         case definitionFragment of
                             Key key ->
-                                generator reducedLexicon key
+                                generator filler reducedLexicon key
 
                             Constant string ->
                                 Random.constant string
