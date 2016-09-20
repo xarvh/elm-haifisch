@@ -101,7 +101,7 @@ fleet
 
 
 generatorByKey key =
-    LexicalRandom.generator defaultLexicon key
+    LexicalRandom.generator (always "---") defaultLexicon key
         |> Random.map LexicalRandom.capitalize
 
 
