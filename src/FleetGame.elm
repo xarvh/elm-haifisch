@@ -254,6 +254,16 @@ mergeWithBehavior game targetFleetId oldFleet =
                 ( updateCommands oldFleet, effects )
 
 
+
+attackBehavior : Game -> Int -> Fleet -> ( Fleet, List GameEffect )
+attackBehavior game targetFleetId oldFleet =
+    -- TODO: actually attack!
+    (oldFleet, [] )
+
+
+
+
+
 tick : Game -> Fleet -> ( Fleet, List GameEffect )
 tick game fleet =
     case List.head fleet.commands of
@@ -264,6 +274,9 @@ tick game fleet =
             case command of
                 G.ThrustTo targetPosition ->
                     noEffect <| thrustToBehavior targetPosition fleet
+
+                G.Attack targetFleetId ->
+                    attackBehavior game targetFleetId fleet
 
                 G.MergeWith targetFleetId ->
                     mergeWithBehavior game targetFleetId fleet

@@ -84,6 +84,7 @@ type QueueMode
 
 type FleetCommand
     = ThrustTo Vector
+    | Attack FleetId
     | MergeWith FleetId
 
 
@@ -176,12 +177,6 @@ findId id =
 
 
 
--- Used to get from a list of ids to a list of items
--- `List.filterMap (G.mapId game.fleets) ui.selectedIds`
-
-
-mapId =
-    flip findId
 
 
 selectedFleets selectedIds =

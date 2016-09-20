@@ -54,11 +54,23 @@ update msg game uiShared model =
             manageMouse button Ui.MouseRelease game uiShared model
 
         UserClicksFleet fleetId button pos ->
-            select (Ui.FleetSelection <| Set.singleton fleetId) model
+            case button of
+                Ui.MouseRight ->
+                    ( model, uiShared.selection, targetFleetCommand fleetId game uiShared )
+
+                _ ->
+                    select (Ui.FleetSelection <| Set.singleton fleetId) model
 
 
 select selection model =
     ( { model | selectionBox = Nothing }, selection, [] )
+
+
+
+
+targetFleetCommand : G.Id -> Game -> Ui.UiShared a -> List G.Command
+targetFleetCommand targetFleetId game uiShared =
+    [ G.FleetCommand (Set.toList <| Ui.fleetIds uiShared) (Ui.queueMode uiShared) (G.Attack targetFleetId) ]
 
 
 
