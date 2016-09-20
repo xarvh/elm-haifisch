@@ -1,5 +1,6 @@
 module UiMain exposing (..)
 
+import Dict
 import GameCommon as G
     exposing
         ( Game
@@ -38,23 +39,46 @@ init =
 
 
 
--- SELECTION
--- select selectionType selectedIds model =
---     { model
---     | selection = Ui.FleetSelection selectedIds
---     , selectionBox = Nothing
---     }
 -- COMMANDS FACTORIES
 
 
 mergeFleets : Game -> Model -> List G.Command
 mergeFleets game model =
-    case G.selectedFleets (Ui.fleetIds model) game.fleets |> List.map .id of
-        first :: others ->
-            [ G.FleetCommand others (Ui.queueMode model) (G.MergeWith first) ]
+    let
+        compare fleetA fleetB =
+            if List.length fleetA.ships < List.length fleetB.ships then
+                fleetB
+            else
+                fleetA
 
-        [] ->
+        fold id fleet maybeBest =
+            case maybeBest of
+                Nothing ->
+                    Just fleet
+
+                Just best ->
+                    Just <| compare fleet best
+
+        selectedFleets =
+            G.selectedFleets (Ui.fleetIds model) game.fleets
+
+        maybeRemainingFleet =
+            Dict.foldl fold Nothing selectedFleets
+
+        remainingFleetId =
+            Maybe.map .id maybeRemainingFleet
+                |> Maybe.withDefault 0
+
+        others =
+            selectedFleets
+                |> Dict.remove remainingFleetId
+                |> Dict.keys
+                |> Set.fromList
+    in
+        if Set.isEmpty others then
             []
+        else
+            [ G.FleetCommand others (Ui.queueMode model) (G.MergeWith remainingFleetId) ]
 
 
 

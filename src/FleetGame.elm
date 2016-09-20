@@ -1,5 +1,6 @@
 module FleetGame exposing (..)
 
+import Dict
 import Math.Vector2 as V
 import Names
 import Random.Pcg as Random
@@ -233,7 +234,7 @@ thrustToBehavior targetPosition oldFleet =
 
 mergeWithBehavior : Game -> Int -> Fleet -> ( Fleet, List GameEffect )
 mergeWithBehavior game targetFleetId oldFleet =
-    case G.findId targetFleetId game.fleets of
+    case Dict.get targetFleetId game.fleets of
         Nothing ->
             noEffect <| popCommand oldFleet
 

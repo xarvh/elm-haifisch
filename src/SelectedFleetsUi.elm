@@ -1,5 +1,6 @@
 module SelectedFleetsUi exposing (..)
 
+import Dict
 import GameCommon as G
     exposing
         ( Game
@@ -66,7 +67,7 @@ update msg model =
                                 if Set.isEmpty shipIds then
                                     []
                                 else
-                                    [ G.FleetSplit clickedFleetId (Set.toList shipIds) ]
+                                    [ G.FleetSplit clickedFleetId shipIds ]
                         in
                             ( newModel, cmd )
 
@@ -142,8 +143,8 @@ menuFleet viewerPlayerId model fleet =
             ]
 
 
-view : Id -> List Fleet -> Model -> H.Html Msg
+view : Id -> G.FleetDict -> Model -> H.Html Msg
 view viewerPlayerId selectedFleets model =
     H.div
         [ HA.class "selection-fleets-list" ]
-        (List.map (menuFleet viewerPlayerId model) selectedFleets)
+        (Dict.values selectedFleets |> List.map (menuFleet viewerPlayerId model))
