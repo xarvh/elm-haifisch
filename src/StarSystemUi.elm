@@ -241,6 +241,7 @@ drawFleetCommandQueues asViewedByPlayerId uiShared fleets =
     case uiShared.selection of
         Ui.FleetSelection ids ->
             G.selectedFleets ids fleets
+                |> List.filter (.empireId >> (==) asViewedByPlayerId)
                 |> List.map (drawFleetCommandQueue asViewedByPlayerId)
 
         _ ->
@@ -303,8 +304,8 @@ selectionBox model =
                 [ rect ]
 
 
-shipView : Bool -> G.Id -> G.Ship -> Svg.Svg Msg
-shipView isSelected fleetId ship =
+shipView : Bool -> Bool -> G.Id -> G.Ship -> Svg.Svg Msg
+shipView isFriendly isSelected fleetId ship =
     let
         size =
             0.05
@@ -318,12 +319,12 @@ shipView isSelected fleetId ship =
             , onEventCooked "mousedown" MouseMove
             , onEventCooked "mouseup" (UserClicksFleet fleetId)
             ]
-            [ FleetView.shipSvg isSelected ship ]
+            [ FleetView.shipSvg isFriendly isSelected ship ]
 
 
-fleetView : Bool -> G.Fleet -> List (Svg.Svg Msg)
-fleetView isSelected fleet =
-    List.map (shipView isSelected fleet.id) fleet.ships
+fleetView : Bool -> Bool -> G.Fleet -> List (Svg.Svg Msg)
+fleetView isFriendly isSelected fleet =
+    List.map (shipView isFriendly isSelected fleet.id) fleet.ships
 
 
 drawFleets asViewedByPlayerId game uiShared =
@@ -336,8 +337,11 @@ drawFleets asViewedByPlayerId game uiShared =
                 _ ->
                     Set.empty
 
+        isFriendly fleet =
+            fleet.empireId == asViewedByPlayerId
+
         displayFleet fleet =
-            fleetView (Set.member fleet.id selectedIds) fleet
+            fleetView (isFriendly fleet) (Set.member fleet.id selectedIds) fleet
     in
         -- TODO display only fleets per asViewedByPlayerId
         List.map displayFleet game.fleets

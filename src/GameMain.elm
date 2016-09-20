@@ -29,11 +29,11 @@ type Message
 -- FUNCTIONS
 
 
-addFleet : Float -> Float -> Game -> Game
-addFleet x y game =
+addFleet : EmpireId -> Float -> Float -> Game -> Game
+addFleet empireId x y game =
     let
         ( fleet, nextId, seed ) =
-            Fleet.init 0 (vector x y) ( game.nextId, game.seed )
+            Fleet.init empireId (vector x y) ( game.nextId, game.seed )
     in
         { game
             | nextId = nextId
@@ -44,9 +44,10 @@ addFleet x y game =
 
 init seed =
     Game 1 [] [] 0 False (Random.initialSeed seed)
-        |> addFleet (1 / 2) (1 / 2)
-        |> addFleet (1 / 3) (1 / 3)
-        |> addFleet (1 / 2) (1 / 3)
+        |> addFleet 0 (1 / 2) (1 / 2)
+        |> addFleet 0 (1 / 3) (1 / 3)
+        |> addFleet 0 (1 / 2) (1 / 3)
+        |> addFleet 1 (-1 / 2) (-1 / 3)
 
 
 

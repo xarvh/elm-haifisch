@@ -84,8 +84,8 @@ update msg model =
 -- VIEW
 
 
-menuShip : Bool -> Set.Set Id -> Ship -> H.Html Msg
-menuShip isSplittingFleet splittingShipIds ship =
+menuShip : Bool -> Bool -> Set.Set Id -> Ship -> H.Html Msg
+menuShip isFriendly isSplittingFleet splittingShipIds ship =
     H.div
         [ HA.class "selection-ship" ]
         [ Svg.svg
@@ -93,7 +93,7 @@ menuShip isSplittingFleet splittingShipIds ship =
             , SA.height "8vh"
             , SA.viewBox "-1 -1 2 2"
             ]
-            [ FleetView.shipSvg False ship ]
+            [ FleetView.shipSvg isFriendly False ship ]
         , H.span [ HA.class "ship-name" ] [ H.text ship.name ]
         , if not isSplittingFleet then
             H.text ""
@@ -109,14 +109,17 @@ menuShip isSplittingFleet splittingShipIds ship =
         ]
 
 
-menuFleet : Model -> Fleet -> H.Html Msg
-menuFleet model fleet =
+menuFleet : Id -> Model -> Fleet -> H.Html Msg
+menuFleet viewerPlayerId model fleet =
     let
         ( splittingFleetId, splittingShipIds ) =
             Maybe.withDefault ( -1, Set.empty ) model.splittingFleet
 
         isSplitting =
             fleet.id == splittingFleetId
+
+        isFriendly =
+            fleet.empireId == viewerPlayerId
     in
         H.div
             [ HA.class "selection-fleet" ]
@@ -134,17 +137,13 @@ menuFleet model fleet =
                             "Split"
                     ]
                 ]
-            , H.div [ HA.class "selection-ships-list" ] <| List.map (menuShip isSplitting splittingShipIds) fleet.ships
+            , H.div [ HA.class "selection-ships-list" ] <|
+                List.map (menuShip isFriendly isSplitting splittingShipIds) fleet.ships
             ]
-
-
-
---         selectedFleets =
---             List.filterMap (G.mapId game.fleets) ui.selectedIds
 
 
 view : Id -> List Fleet -> Model -> H.Html Msg
 view viewerPlayerId selectedFleets model =
     H.div
         [ HA.class "selection-fleets-list" ]
-        (List.map (menuFleet model) selectedFleets)
+        (List.map (menuFleet viewerPlayerId model) selectedFleets)
