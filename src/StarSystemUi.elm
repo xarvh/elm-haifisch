@@ -431,7 +431,7 @@ shipView : Bool -> Bool -> G.Id -> G.Ship -> Svg.Svg Msg
 shipView isFriendly isSelected fleetId ship =
     let
         size =
-            0.05
+            0.03
     in
         Svg.g
             [ A.transform <|
