@@ -92,7 +92,7 @@ menuShip isFriendly isSplittingFleet splittingShipIds ship =
         [ Svg.svg
             [ SA.width "8vh"
             , SA.height "8vh"
-            , SA.viewBox "-1 -1 2 2"
+            , SA.viewBox "-1.2 -1.2 2.4 2.4"
             ]
             [ FleetView.shipSvg isFriendly False ship ]
         , H.span [ HA.class "ship-name" ] [ H.text ship.name ]

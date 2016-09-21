@@ -339,22 +339,58 @@ star =
     Svg.circle
         [ A.cx "0"
         , A.cy "0"
-        , A.r "0.05"
-        , A.fill "#ff0"
+        , A.r "0.02"
+        , A.fill "#007"
+        , A.stroke "#00f"
+        , A.strokeWidth "0.002"
         ]
         []
 
 
+planet orbitRadius =
+    Svg.g
+        []
+        -- orbit
+        [ Svg.circle
+            [ A.cx "0"
+            , A.cy "0"
+            , A.r <| toString orbitRadius
+            , A.fill "none"
+            , A.stroke "#00f"
+            , A.strokeWidth "0.002"
+            ]
+            []
+          -- planet
+        , Svg.circle
+            [ A.cx <| toString orbitRadius
+            , A.cy "0"
+            , A.r "0.005"
+            , A.fill "#070"
+            , A.stroke "#0f0"
+            , A.strokeWidth "0.002"
+            ]
+            []
+          -- marker
+        , Svg.circle
+            [ A.cx <| toString orbitRadius
+            , A.cy "0"
+            , A.r "0.03"
+            , A.fill "none"
+            , A.stroke "#0f0"
+            , A.strokeWidth "0.003"
+            ]
+            []
+        ]
+
+
 outerWellMarker =
-    Svg.ellipse
+    Svg.circle
         [ A.cx "0"
         , A.cy "0"
-        , A.rx <| toString starSystemOuterRadius
-        , A.ry <| toString starSystemOuterRadius
+        , A.r <| toString starSystemOuterRadius
         , A.fill "none"
-        , A.stroke "#999"
-        , A.strokeWidth "0.01"
-        , A.strokeDasharray "6%, 6%"
+        , A.stroke "#007"
+        , A.strokeWidth "0.006"
         ]
         []
 
@@ -395,7 +431,7 @@ shipView : Bool -> Bool -> G.Id -> G.Ship -> Svg.Svg Msg
 shipView isFriendly isSelected fleetId ship =
     let
         size =
-            0.05
+            0.03
     in
         Svg.g
             [ A.transform <|
@@ -437,6 +473,65 @@ drawFleets asViewedByPlayerId game uiShared =
             |> List.concat
 
 
+selectionCross uiShared game =
+    let
+        fleets =
+            Ui.selectedFleets uiShared game
+
+        addShip ship ( xs, ys ) =
+            ( V.getX ship.currentPosition :: xs, V.getY ship.currentPosition :: ys )
+
+        addFleet id fleet accum =
+            List.foldl addShip accum fleet.ships
+
+        ( xs, ys ) =
+            Dict.foldl addFleet ( [], [] ) fleets
+
+        spacing =
+            0.1
+
+        minX =
+            List.minimum xs |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+
+        maxX =
+            List.maximum xs |> Maybe.withDefault 0 |> (+) spacing |> min 1
+
+        minY =
+            List.minimum ys |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+
+        maxY =
+            List.maximum ys |> Maybe.withDefault 0 |> (+) spacing |> min 1
+
+        midX =
+            (maxX + minX) / 2
+
+        midY =
+            (maxY + minY) / 2
+
+        line x1 y1 x2 y2 =
+            Svg.line
+                [ A.x1 <| toString x1
+                , A.y1 <| toString y1
+                , A.x2 <| toString x2
+                , A.y2 <| toString y2
+                , A.stroke "#0f0"
+                  --                 , A.opacity "0.2"
+                , A.strokeWidth "0.002"
+                ]
+                []
+    in
+        if Dict.isEmpty fleets then
+            []
+        else
+            -- left and right horizontal lines
+            [ line -1 midY minX midY
+            , line maxX midY 1 midY
+              -- vertical lines
+            , line midX -1 midX minY
+            , line midX maxY midX 1
+            ]
+
+
 view : Int -> Game -> Ui.UiShared a -> Model -> Svg.Svg Msg
 view asViewedByPlayerId game uiShared model =
     Svg.svg
@@ -452,8 +547,10 @@ view asViewedByPlayerId game uiShared model =
     <|
         List.concat <|
             [ [ star ]
+            , [ planet <| starSystemOuterRadius / 3 ]
             , [ outerWellMarker ]
-            , selectionBox model
             , (drawFleetCommandQueues asViewedByPlayerId uiShared game)
             , (drawFleets asViewedByPlayerId game uiShared)
+            , selectionCross uiShared game
+            , selectionBox model
             ]

@@ -14,11 +14,12 @@ import Html.Events
 import Keyboard
 import SelectedFleetsUi
 import Set
+import Svg as S
+import Svg.Attributes as SA
 import StarSystemUi
 import UiCommon as Ui
 
 
--- import UIView
 -- MODEL
 
 
@@ -30,7 +31,7 @@ type alias Model =
 
 
 init =
-    { selection = Ui.FleetSelection (Set.fromList [0..99])
+    { selection = Ui.FleetSelection (Set.fromList [0..4])
     , ctrl = False
     , shift = False
     , selectedFleetsUi = SelectedFleetsUi.init
@@ -171,22 +172,31 @@ updateForNotification notification model =
 
 
 -- VIEW
--- This gives info on whatever is selected
 
 
-infoBox : H.Html Msg
-infoBox =
+infoBox : G.Game -> Model -> H.Html Msg
+infoBox game model =
     H.div
         [ HA.class "info-box" ]
         [ H.ul [] <|
             List.map
                 (\s -> H.li [] [ H.text s ])
-                [ "Mouse left: select fleet / marking box"
+                [ "Mouse left: select / marking box"
                 , "Mouse right: move / attack (not implemented)"
                 , "M: merge selected fleets"
                 , "Hold Shift to queue commands"
+                , "Space: "
+                    ++ (if game.pause then
+                            "unpause"
+                        else
+                            "pause"
+                       )
                 ]
         ]
+
+
+
+-- This gives info on whatever is selected
 
 
 selectionMenu : Id -> G.Game -> Model -> H.Html Msg
@@ -208,17 +218,59 @@ starSystemBox viewerPlayerId game model =
         ]
 
 
+background game =
+    let
+        ( fill, stroke, strokeWidth ) =
+            if game.pause then
+                ( "#000030", "#000075", "3px" )
+            else
+                ( "#000030", "black", "10px" )
+    in
+        S.svg
+            [ SA.class "ui-background"
+            ]
+            [ S.defs
+                []
+                [ S.pattern
+                    [ SA.id "hex-background"
+                    , SA.width "56px"
+                    , SA.height "100px"
+                    , SA.patternUnits "userSpaceOnUse"
+                    , SA.patternTransform "scale(0.5)"
+                    ]
+                    [ S.rect
+                        [ SA.width "100%"
+                        , SA.height "100%"
+                        , SA.fill fill
+                        ]
+                        []
+                    , S.path
+                        [ SA.d "M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100"
+                        , SA.fill fill
+                        , SA.stroke stroke
+                        , SA.strokeWidth strokeWidth
+                        ]
+                        []
+                    ]
+                ]
+            , S.rect
+                [ SA.fill "url(#hex-background)"
+                , SA.width "100%"
+                , SA.height "100%"
+                ]
+                []
+            ]
+
+
 view : Int -> Game -> Model -> H.Html Msg
 view viewerPlayerId game model =
     H.div
-        [ HA.style
-            [ ( "width", "100vw" )
-            , ( "height", "100vh" )
-            ]
+        [ HA.class "ui"
         ]
-        [ starSystemBox viewerPlayerId game model
+        [ background game
+        , starSystemBox viewerPlayerId game model
         , selectionMenu viewerPlayerId game model
-        , infoBox
+        , infoBox game model
         ]
 
 
