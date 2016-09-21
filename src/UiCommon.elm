@@ -52,3 +52,7 @@ fleetIds uiShared =
 
         _ ->
             Set.empty
+
+selectedFleets : UiShared a -> G.Game -> G.FleetDict
+selectedFleets uiShared game =
+    G.selectedFleets (fleetIds uiShared) game.fleets

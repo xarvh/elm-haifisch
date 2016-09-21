@@ -346,6 +346,7 @@ star =
         ]
         []
 
+
 planet orbitRadius =
     Svg.g
         []
@@ -359,7 +360,7 @@ planet orbitRadius =
             , A.strokeWidth "0.002"
             ]
             []
-        -- planet
+          -- planet
         , Svg.circle
             [ A.cx <| toString orbitRadius
             , A.cy "0"
@@ -369,7 +370,7 @@ planet orbitRadius =
             , A.strokeWidth "0.002"
             ]
             []
-        -- marker
+          -- marker
         , Svg.circle
             [ A.cx <| toString orbitRadius
             , A.cy "0"
@@ -390,7 +391,6 @@ outerWellMarker =
         , A.fill "none"
         , A.stroke "#007"
         , A.strokeWidth "0.006"
---         , A.strokeDasharray "6%, 6%"
         ]
         []
 
@@ -473,6 +473,65 @@ drawFleets asViewedByPlayerId game uiShared =
             |> List.concat
 
 
+selectionCross uiShared game =
+    let
+        fleets =
+            Ui.selectedFleets uiShared game
+
+        addShip ship ( xs, ys ) =
+            ( V.getX ship.currentPosition :: xs, V.getY ship.currentPosition :: ys )
+
+        addFleet id fleet accum =
+            List.foldl addShip accum fleet.ships
+
+        ( xs, ys ) =
+            Dict.foldl addFleet ( [], [] ) fleets
+
+        spacing =
+            0.1
+
+        minX =
+            List.minimum xs |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+
+        maxX =
+            List.maximum xs |> Maybe.withDefault 0 |> (+) spacing |> min 1
+
+        minY =
+            List.minimum ys |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+
+        maxY =
+            List.maximum ys |> Maybe.withDefault 0 |> (+) spacing |> min 1
+
+        midX =
+            (maxX + minX) / 2
+
+        midY =
+            (maxY + minY) / 2
+
+        line x1 y1 x2 y2 =
+            Svg.line
+                [ A.x1 <| toString x1
+                , A.y1 <| toString y1
+                , A.x2 <| toString x2
+                , A.y2 <| toString y2
+                , A.stroke "#0f0"
+                  --                 , A.opacity "0.2"
+                , A.strokeWidth "0.002"
+                ]
+                []
+    in
+        if Dict.isEmpty fleets then
+            []
+        else
+            -- left and right horizontal lines
+            [ line -1 midY minX midY
+            , line maxX midY 1 midY
+              -- vertical lines
+            , line midX -1 midX minY
+            , line midX maxY midX 1
+            ]
+
+
 view : Int -> Game -> Ui.UiShared a -> Model -> Svg.Svg Msg
 view asViewedByPlayerId game uiShared model =
     Svg.svg
@@ -490,7 +549,8 @@ view asViewedByPlayerId game uiShared model =
             [ [ star ]
             , [ planet <| starSystemOuterRadius / 3 ]
             , [ outerWellMarker ]
-            , selectionBox model
             , (drawFleetCommandQueues asViewedByPlayerId uiShared game)
             , (drawFleets asViewedByPlayerId game uiShared)
+            , selectionCross uiShared game
+            , selectionBox model
             ]
