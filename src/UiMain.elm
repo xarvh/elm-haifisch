@@ -31,7 +31,7 @@ type alias Model =
 
 
 init =
-    { selection = Ui.FleetSelection (Set.fromList [0..99])
+    { selection = Ui.FleetSelection (Set.fromList [0..4])
     , ctrl = False
     , shift = False
     , selectedFleetsUi = SelectedFleetsUi.init
@@ -172,23 +172,31 @@ updateForNotification notification model =
 
 
 -- VIEW
--- This gives info on whatever is selected
 
 
-infoBox : H.Html Msg
-infoBox =
+infoBox : G.Game -> Model -> H.Html Msg
+infoBox game model =
     H.div
         [ HA.class "info-box" ]
         [ H.ul [] <|
             List.map
                 (\s -> H.li [] [ H.text s ])
-                [ "Mouse left: select fleet / marking box"
+                [ "Mouse left: select / marking box"
                 , "Mouse right: move / attack (not implemented)"
                 , "M: merge selected fleets"
                 , "Hold Shift to queue commands"
-                , "Space: pause"
+                , "Space: "
+                    ++ (if game.pause then
+                            "unpause"
+                        else
+                            "pause"
+                       )
                 ]
         ]
+
+
+
+-- This gives info on whatever is selected
 
 
 selectionMenu : Id -> G.Game -> Model -> H.Html Msg
@@ -214,9 +222,9 @@ background game =
     let
         ( fill, stroke, strokeWidth ) =
             if game.pause then
-                ( "#000030" , "#000075", "3px")
+                ( "#000030", "#000075", "3px" )
             else
-                ( "#000030" , "black", "10px")
+                ( "#000030", "black", "10px" )
     in
         S.svg
             [ SA.class "ui-background"
@@ -262,7 +270,7 @@ view viewerPlayerId game model =
         [ background game
         , starSystemBox viewerPlayerId game model
         , selectionMenu viewerPlayerId game model
-        , infoBox
+        , infoBox game model
         ]
 
 
