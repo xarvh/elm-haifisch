@@ -22,19 +22,18 @@
     position: absolute;
     bottom: 0.5%;
     left: 0.5%;
-    border: 1px solid white;
     width: 30%;
 }
 
 
 .selection-fleet {
-    background-color: lightgreen;
+    background-color: rgba(0, 0, 100, 0.8);
     margin: 0.5vh;
 }
 
 .selection-fleet .fleet-header {
-    background-color: green;
-    color: lightgreen;
+    background-color: #008;
+    color: #0f0;
     display: flex;
     justify-content: space-between;
 }
@@ -53,7 +52,7 @@
 }
 
 .selection-ship .ship-name {
-    color: green;
+    color: #0f0;
     margin-left: 0.5vh;
 }
 
