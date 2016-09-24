@@ -30,13 +30,20 @@ type alias Model =
         }
 
 
+init : ( Model, Cmd Msg )
 init =
-    { selection = Ui.FleetSelection (Set.fromList [0..4])
-    , ctrl = False
-    , shift = False
-    , selectedFleetsUi = SelectedFleetsUi.init
-    , starSystemUi = StarSystemUi.init
-    }
+    let
+        ( starModel, starCmd ) =
+            StarSystemUi.init
+    in
+        ( { selection = Ui.FleetSelection (Set.fromList [0..4])
+          , ctrl = False
+          , shift = False
+          , selectedFleetsUi = SelectedFleetsUi.init
+          , starSystemUi = starModel
+          }
+        , Cmd.map ToStarSystemUiMsg starCmd
+        )
 
 
 
@@ -212,7 +219,7 @@ selectionMenu viewerPlayerId game model =
 
 starSystemBox viewerPlayerId game model =
     H.div
-        [ HA.class "star-system-container" ]
+        [ HA.class "star-system-container full-window" ]
         [ StarSystemUi.view viewerPlayerId game model model.starSystemUi
             |> App.map ToStarSystemUiMsg
         ]
@@ -227,7 +234,7 @@ background game =
                 ( "#000030", "black", "10px" )
     in
         S.svg
-            [ SA.class "ui-background"
+            [ SA.class "ui-background full-window"
             ]
             [ S.defs
                 []
@@ -282,4 +289,5 @@ subscriptions =
     Sub.batch
         [ Keyboard.downs KeyPress
         , Keyboard.ups KeyRelease
+        , Sub.map ToStarSystemUiMsg StarSystemUi.subscriptions
         ]

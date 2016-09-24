@@ -28,9 +28,13 @@ type alias Model =
 
 
 init seed =
-    ( Model (GameMain.init seed) UiMain.init 0
-    , Cmd.none
-    )
+    let
+        ( uiModel, uiCmd ) =
+            UiMain.init
+    in
+        ( Model (GameMain.init seed) uiModel 0
+        , Cmd.map ToUiMainMsg uiCmd
+        )
 
 
 type ServerMessage

@@ -16,12 +16,14 @@ import FleetView
 import Html.Events
 import Math.Vector2 as V
 import Json.Decode as Json exposing ((:=))
+import Mouse
 import Set
 import Svg
 import Svg.Attributes as A
-import SvgMouse
 import String
+import Task
 import UiCommon as Ui
+import Window
 
 
 type alias Svg =
@@ -35,33 +37,79 @@ type alias Svg =
 type alias Model =
     { selectionBox : Maybe Vector
     , mousePosition : Vector
+    , windowSizeInPixels : Window.Size
+    , windowSizeInGameCoordinates : { width : Float, height : Float }
     }
 
 
+init : ( Model, Cmd Msg )
 init =
-    Model Nothing (vector 0 0)
+    ( { selectionBox = Nothing
+      , mousePosition = vector 0 0
+      , windowSizeInPixels = { width = 600, height = 600 }
+      , windowSizeInGameCoordinates = { width = 2, height = 2 }
+      }
+    , Task.perform identity WindowResizes Window.size
+    )
 
 
 type Msg
-    = MouseMove Ui.MouseButtonIndex Vector
-    | MousePress Ui.MouseButtonIndex Vector
-    | MouseRelease Ui.MouseButtonIndex Vector
-    | UserClicksFleet Int Ui.MouseButtonIndex Vector
+    = MouseNoop Ui.MouseButtonIndex
+    | MousePress Ui.MouseButtonIndex
+    | MouseRelease Ui.MouseButtonIndex
+    | MouseMoves Mouse.Position
+    | WindowResizes Window.Size
+    | UserClicksFleet Int Ui.MouseButtonIndex
 
 
 update : Msg -> Game -> Ui.UiShared a -> Model -> ( Model, Ui.Selection, List G.Command )
 update msg game uiShared model =
     case msg of
-        MouseMove button pos ->
-            ( { model | mousePosition = pos }, uiShared.selection, [] )
+        MouseNoop button ->
+            ( model, uiShared.selection, [] )
 
-        MousePress button pos ->
+        MousePress button ->
             manageMouse button Ui.MousePress game uiShared model
 
-        MouseRelease button pos ->
+        MouseRelease button ->
             manageMouse button Ui.MouseRelease game uiShared model
 
-        UserClicksFleet fleetId button pos ->
+        MouseMoves pixelPosition ->
+            let
+                hp =
+                    toFloat model.windowSizeInPixels.height
+
+                wp =
+                    toFloat model.windowSizeInPixels.width
+
+                y =
+                    model.windowSizeInGameCoordinates.height * (toFloat pixelPosition.y - hp / 2) / hp
+
+                x =
+                    model.windowSizeInGameCoordinates.width * (toFloat pixelPosition.x - wp / 2) / wp
+            in
+                ( { model | mousePosition = vector x y }, uiShared.selection, [] )
+
+        WindowResizes size ->
+            let
+                internalCoordinatesHeight =
+                    starSystemOuterRadius * 2.1
+
+                internalCoordinatesWidth =
+                    toFloat size.width * internalCoordinatesHeight / toFloat size.height
+
+                newModel =
+                    { model
+                        | windowSizeInPixels = size
+                        , windowSizeInGameCoordinates =
+                            { width = internalCoordinatesWidth
+                            , height = internalCoordinatesHeight
+                            }
+                    }
+            in
+                ( newModel, uiShared.selection, [] )
+
+        UserClicksFleet fleetId button ->
             case button of
                 Ui.MouseRight ->
                     ( model, uiShared.selection, targetFleetCommand fleetId game uiShared )
@@ -137,14 +185,7 @@ boxSelection start end game =
                 ( sx, sy ) =
                     V.toTuple ship.currentPosition
             in
-                sx
-                    >= x
-                    && sx
-                    <= x'
-                    && sy
-                    >= y
-                    && sy
-                    <= y'
+                sx >= x && sx <= x' && sy >= y && sy <= y'
 
         folder id fleet set =
             if
@@ -191,9 +232,6 @@ starSystemSvgId =
 
 decodeStarSystemMouse tagger =
     let
-        toVector ( x, y ) =
-            vector x y
-
         decodeMouseButtons which button =
             if which == 1 || button == 0 then
                 Ui.MouseLeft
@@ -202,10 +240,10 @@ decodeStarSystemMouse tagger =
             else
                 Ui.MouseMid
 
-        mapper clientX clientY which button =
-            tagger (decodeMouseButtons which button) <| toVector <| SvgMouse.transform ("svg#" ++ starSystemSvgId) clientX clientY
+        mapper which button =
+            tagger <| decodeMouseButtons which button
     in
-        Json.object4 mapper ("clientX" := Json.int) ("clientY" := Json.int) ("which" := Json.int) ("button" := Json.int)
+        Json.object2 mapper ("which" := Json.int) ("button" := Json.int)
 
 
 onEventCooked eventName tagger =
@@ -439,7 +477,7 @@ shipView isFriendly isSelected fleetId ship =
                     [ "translate(" ++ G.vectorToString ship.currentPosition ++ ")"
                     , "scale(" ++ toString size ++ ")"
                     ]
-            , onEventCooked "mousedown" MouseMove
+            , onEventCooked "mousedown" MouseNoop
             , onEventCooked "mouseup" (UserClicksFleet fleetId)
             ]
             [ FleetView.shipSvg isFriendly isSelected ship ]
@@ -532,15 +570,21 @@ selectionCross uiShared game =
             ]
 
 
+viewbox model =
+    let
+        w = model.windowSizeInGameCoordinates.width
+        h = model.windowSizeInGameCoordinates.height
+    in
+        String.join " " <| List.map toString [-w/2, -h/2, w, h]
+
+
+
 view : Int -> Game -> Ui.UiShared a -> Model -> Svg.Svg Msg
 view asViewedByPlayerId game uiShared model =
     Svg.svg
-        [ A.height "99vh"
-        , A.viewBox "-1 -1 2 2"
-        , A.preserveAspectRatio "xMidYMid meet"
+        [ A.viewBox (viewbox model)
         , A.id starSystemSvgId
-        , onEventCooked "mousemove" MouseMove
-        , onEventCooked "contextmenu" MouseMove
+        , onEventCooked "contextmenu" MouseNoop
         , onEventCooked "mousedown" MousePress
         , onEventCooked "mouseup" MouseRelease
         ]
@@ -554,3 +598,14 @@ view asViewedByPlayerId game uiShared model =
             , selectionCross uiShared game
             , selectionBox model
             ]
+
+
+
+-- Subscriptions
+
+
+subscriptions =
+    Sub.batch
+        [ Window.resizes WindowResizes
+        , Mouse.moves MouseMoves
+        ]
