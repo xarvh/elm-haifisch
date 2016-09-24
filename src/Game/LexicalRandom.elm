@@ -1,4 +1,4 @@
-module LexicalRandom
+module Game.LexicalRandom
     exposing
         ( Definition
         , Lexicon

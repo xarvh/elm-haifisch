@@ -1,7 +1,7 @@
-module UiMain exposing (..)
+module Client.UiMain exposing (..)
 
 import Dict
-import GameCommon as G
+import Game.Common as G
     exposing
         ( Game
         , Id
@@ -12,12 +12,12 @@ import Html.App as App
 import Html.Attributes as HA
 import Html.Events
 import Keyboard
-import SelectedFleetsUi
+import Client.SelectedFleetsUi as SelectedFleetsUi
 import Set
 import Svg as S
 import Svg.Attributes as SA
-import StarSystemUi
-import UiCommon as Ui
+import Client.StarSystemUi as StarSystemUi
+import Client.UiCommon as Ui
 
 
 -- MODEL

@@ -1,6 +1,6 @@
-module UiCommon exposing (..)
+module Client.UiCommon exposing (..)
 
-import GameCommon as G
+import Game.Common as G
 import Set
 
 

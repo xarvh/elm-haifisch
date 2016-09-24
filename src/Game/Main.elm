@@ -1,10 +1,10 @@
-module GameMain exposing (..)
+module Game.Main exposing (..)
 
 import Dict exposing (Dict)
-import FleetGame as Fleet
+import Game.Fleet as Fleet
 import Random.Pcg as Random
-import Names
-import GameCommon as G
+import Game.Names as Names
+import Game.Common as G
     exposing
         ( Game
         , Empire

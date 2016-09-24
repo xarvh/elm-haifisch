@@ -1,4 +1,4 @@
-module FleetView exposing (..)
+module Client.FleetView exposing (..)
 
 import String
 import Svg

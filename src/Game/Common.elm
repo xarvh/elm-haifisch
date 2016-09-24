@@ -1,4 +1,4 @@
-module GameCommon exposing (..)
+module Game.Common exposing (..)
 
 import Dict exposing (Dict)
 import Math.Vector2 as V
