@@ -1,10 +1,10 @@
-module FleetGame exposing (..)
+module Game.Fleet exposing (..)
 
 import Dict
 import Math.Vector2 as V
-import Names
+import Game.Names as Names
 import Random.Pcg as Random
-import GameCommon as G
+import Game.Common as G
     exposing
         ( Game
         , GameEffect

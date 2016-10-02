@@ -15,6 +15,7 @@
         "elm-lang/html": "1.1.0 <= v < 2.0.0",
         "elm-lang/keyboard": "1.0.0 <= v < 2.0.0",
         "elm-lang/mouse": "1.0.0 <= v < 2.0.0",
+        "elm-lang/navigation": "1.0.0 <= v < 2.0.0",
         "elm-lang/svg": "1.1.1 <= v < 2.0.0",
         "elm-lang/window": "1.0.0 <= v < 2.0.0",
         "mgold/elm-random-pcg": "3.0.3 <= v < 4.0.0"

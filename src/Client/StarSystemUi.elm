@@ -1,7 +1,7 @@
-module StarSystemUi exposing (..)
+module Client.StarSystemUi exposing (..)
 
 import Dict
-import GameCommon as G
+import Game.Common as G
     exposing
         ( Game
         , Id
@@ -12,7 +12,7 @@ import GameCommon as G
         , Vector
         , vector
         )
-import FleetView
+import Client.FleetView as FleetView
 import Html.Events
 import Math.Vector2 as V
 import Json.Decode as Json exposing ((:=))
@@ -22,7 +22,7 @@ import Svg
 import Svg.Attributes as A
 import String
 import Task
-import UiCommon as Ui
+import Client.UiCommon as Ui
 import Window
 
 

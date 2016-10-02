@@ -1,6 +1,6 @@
-module Names exposing (..)
+module Game.Names exposing (..)
 
-import LexicalRandom
+import Game.LexicalRandom as LexicalRandom
 import Random.Pcg as Random
 
 

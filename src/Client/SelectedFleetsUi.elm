@@ -1,7 +1,7 @@
-module SelectedFleetsUi exposing (..)
+module Client.SelectedFleetsUi exposing (..)
 
 import Dict
-import GameCommon as G
+import Game.Common as G
     exposing
         ( Game
         , Id
@@ -14,7 +14,7 @@ import Html.Attributes as HA
 import Svg
 import Svg.Attributes as SA
 import Set
-import FleetView
+import Client.FleetView as FleetView
 
 
 type alias Model =
