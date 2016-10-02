@@ -3,6 +3,7 @@ module Client.Main exposing (..)
 import Process
 import Task
 import Time
+import Html
 import Html.App
 import Game.Common exposing (Game, Command, EmpireId)
 import Game.Main as GameMain
@@ -24,15 +25,17 @@ type alias Model =
     { game : Game
     , ui : UiMain.Model
     , currentPlayerId : EmpireId
+    , serverAddress : Maybe String
     }
 
 
-init seed =
+init : Int -> Maybe String -> ( Model, Cmd Msg )
+init seed serverAddress =
     let
         ( uiModel, uiCmd ) =
             UiMain.init
     in
-        ( Model (GameMain.init seed) uiModel 0
+        ( Model (GameMain.init seed) uiModel 0 serverAddress
         , Cmd.map ToUiMainMsg uiCmd
         )
 
@@ -87,6 +90,7 @@ updateGameAndUi command model =
         noCmd { model | game = newGame, ui = newUi }
 
 
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Noop ->
@@ -114,8 +118,18 @@ update msg model =
                 ( { model | ui = newUiModel }, cmd )
 
 
+urlUpdate : Maybe String -> Model -> ( Model, Cmd Msg )
+urlUpdate maybeNewServerAddress oldModel =
+    ( { oldModel | serverAddress = maybeNewServerAddress }, Cmd.none )
+
+
 view model =
-    Html.App.map ToUiMainMsg <| UiMain.view model.currentPlayerId model.game model.ui
+    case model.serverAddress of
+        Just serverAddress ->
+            Html.text "Sorry, network game is not yet implemented"
+
+        Nothing ->
+            Html.App.map ToUiMainMsg <| UiMain.view model.currentPlayerId model.game model.ui
 
 
 subscriptions model =
