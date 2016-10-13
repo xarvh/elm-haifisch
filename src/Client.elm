@@ -9,21 +9,10 @@ import GameMain
 import UiMain
 
 
--- This is supposed to come from interpolating server and browser animationFrame
-
-
-granularity =
-    Time.millisecond * 100
-
-
-
----------------
-
 
 type alias Model =
     { game : Game
     , ui : UiMain.Model
-    , currentPlayerId : EmpireId
     }
 
 
