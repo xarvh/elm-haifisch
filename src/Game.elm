@@ -26,6 +26,15 @@ shipSpeed =
     0.3 * starSystemOuterRadius / Time.second
 
 
+velocityControlThreshold =
+    0.1
+
+
+headingControlThreshold =
+    0.3
+
+
+
 -- Linear Algebra helpers
 
 
@@ -54,7 +63,8 @@ clampToRadius radius v =
         if ll <= radius then
             v
         else
-            V.scale ( radius / sqrt ll) v
+            V.scale (radius / sqrt ll) v
+
 
 
 -- Ships
@@ -105,13 +115,40 @@ init seed =
 -- Game logic
 
 
+shipControl dt ship =
+    let
+        ignoreVelocityControl =
+            V.length ship.velocityControl < velocityControlThreshold
+
+        ignoreHeadingControl =
+            V.length ship.headingControl < headingControlThreshold
+
+        newPosition =
+            if ignoreVelocityControl then
+                ship.position
+            else
+                ship.position
+                    |> V.add (V.scale (shipSpeed * dt) ship.velocityControl)
+                    |> clampToRadius starSystemOuterRadius
+
+        newHeading =
+            if ignoreHeadingControl then
+                if ignoreVelocityControl then
+                    ship.heading
+                else
+                    ship.velocityControl
+            else
+                ship.headingControl
+    in
+        { ship | position = newPosition, heading = newHeading }
+
+
 randomPosition : Random.Generator Vector
 randomPosition =
     Random.map2
         (\r a -> vector (r * sin a) (r * cos a))
         (Random.float 0 starSystemOuterRadius)
         (Random.float 0 (turns 1))
-
 
 
 makeShip controllerId position name =
@@ -124,7 +161,6 @@ makeShip controllerId position name =
     , name = name
     , status = Spawning 0
     }
-
 
 
 randomShip : Int -> Random.Generator Ship
@@ -168,13 +204,7 @@ shipTick dt id ship =
                 { ship | status = newStatus }
 
         Active activeModel ->
-            let
-                newPosition =
-                    ship.position
-                        |> V.add (V.scale (shipSpeed * dt) ship.velocityControl)
-                        |> clampToRadius starSystemOuterRadius
-            in
-                { ship | position = newPosition }
+            shipControl dt ship
 
         Exploding elapsedTime ->
             { ship | status = Exploding <| max explosionDuration (elapsedTime + dt) }

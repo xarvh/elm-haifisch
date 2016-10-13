@@ -170,13 +170,11 @@ shipSvg ship =
         strokeWidth =
             "0.15"
 
-        (hx, hy) =
+        ( hx, hy ) =
             V.toTuple ship.heading
 
         heading =
-            atan2 hx hy
-
-
+            atan2 hy hx
     in
         S.path
             [ SA.transform <| "rotate(" ++ toString (heading / degrees 1) ++ ")"
