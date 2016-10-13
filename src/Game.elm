@@ -147,9 +147,14 @@ shipControl dt ship =
             if ignoreVelocityControl then
                 ship.position
             else
-                ship.position
-                    |> V.add (V.scale (shipSpeed * dt) ship.velocityControl)
-                    |> clampToRadius starSystemOuterRadius
+                let
+                    -- Reduce speed if not moving straight ahead
+                    f =
+                        0.85 + 0.15 * cos (vectorToAngle ship.velocityControl - ship.heading)
+                in
+                    ship.position
+                        |> V.add (V.scale (f * shipSpeed * dt) ship.velocityControl)
+                        |> clampToRadius starSystemOuterRadius
 
         targetHeading =
             if ignoreHeadingControl then
