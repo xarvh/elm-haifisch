@@ -162,16 +162,16 @@ shipControl dt ship =
                 vectorToAngle ship.headingControl
 
         deltaHeading =
-            (targetHeading - ship.heading)
+            normalizeAngle <| targetHeading - ship.heading
 
         maxTurn =
             turningRate * dt
 
         clampedDeltaAngle =
-            clamp -maxTurn maxTurn (normalizeAngle deltaHeading)
+            clamp -maxTurn maxTurn deltaHeading
 
         newHeading =
-            ship.heading + clampedDeltaAngle
+            normalizeAngle <| ship.heading + clampedDeltaAngle
     in
         { ship | position = newPosition, heading = newHeading }
 
