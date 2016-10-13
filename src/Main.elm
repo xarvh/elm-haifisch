@@ -1,13 +1,17 @@
 module Main exposing (..)
 
+import Dict
 import Gamepad exposing (Gamepad)
+import Game exposing (vector)
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Html.App
 import List.Extra
 import Random
-import Random.Extra
-import Ship exposing (Ship)
+
+
+-- import Random.Extra
+
 import Time exposing (Time)
 import View
 
@@ -16,8 +20,7 @@ import View
 
 
 type alias Model =
-    { ships : List Ship
-    , seed : Random.Seed
+    { game : Game.Model
     }
 
 
@@ -25,25 +28,34 @@ type alias Model =
 -- Game logic
 
 
-updateShipWithGamepad gamepad dt ship =
-    ship
+gamepadToCommand gamepad =
+    -- TODO
+    ( vector 0 0, vector 0 0, False )
 
 
-explodeShip dt ship =
-    ship
+gamepadShip ( ship, gamepad ) =
+    Game.update <| Game.ControlShip ship <| gamepadToCommand gamepad
 
 
-iterateTime : Time -> List Gamepad -> Model -> ( Model, Cmd Msg )
-iterateTime dt gamepads model =
+removeShip ship =
+    Game.update (Game.RemoveShip ship)
 
 
+addShip gamepad =
+    Game.update (Game.AddShip gamepad.index)
+
+
+
+
+animationFrame : Time -> List Gamepad -> Model -> ( Model, Cmd Msg )
+animationFrame dt gamepads model =
+    let
         {- there are three cases than need be covered:
-            * ships associated to a gamepad
-            * ships without gamepad
-            * gamepads without ships
+           * ships associated to a gamepad
+           * ships without gamepad
+           * gamepads without ships
         -}
-
-        folder ship (shipsAndGamepads, shipsWithoutGamepad, remainingGamepads) =
+        folder ship ( shipsAndGamepads, shipsWithoutGamepad, remainingGamepads ) =
             case List.Extra.find (\gp -> gp.index == ship.controllerId) remainingGamepads of
                 Just gamepad ->
                     ( ( ship, gamepad ) :: shipsAndGamepads, shipsWithoutGamepad, List.Extra.remove gamepad remainingGamepads )
@@ -51,41 +63,21 @@ iterateTime dt gamepads model =
                 Nothing ->
                     ( shipsAndGamepads, ship :: shipsWithoutGamepad, remainingGamepads )
 
-       (shipsAndGamepads, shipsWithoutGamepad, gamepadsWithoutShip) =
-           List.foldl folder ([], [], gamepads) model.ships
+        ( shipsAndGamepads, shipsWithoutGamepad, gamepadsWithoutShip ) =
+            List.foldl folder ( [], [], gamepads ) (Dict.values model.game.shipsById)
 
+        apply : (a -> b -> b) -> List a -> b -> b
+        apply f list oldB =
+            List.foldl f oldB list
 
-
-
-        -- manages ships, with or without gamepads
-        mapShip gamepads ship =
-            case List.Extra.find (\gp -> gp.index == ship.controllerId) gamepads of
-                Nothing ->
-                    explodeShip dt ship
-
-                Just gamepad ->
-                    updateShipWithGamepad gamepad dt ship
-
-        shipsAlreadyPresent =
-            List.map (mapShip gamepads) model.ships
-
-        -- manages gamepads without ship
-        foldGamepad ships gamepad ( additionalShips, oldSeed ) =
-            case List.Extra.find (\ship -> ship.controllerId == gamepad.index) ships of
-                Just ship ->
-                    ( additionalShips, oldSeed )
-
-                Nothing ->
-                    let
-                        ( newShip, newSeed ) =
-                            newShip gamepad.index oldSeed
-                    in
-                        ( newShip :: additionalShips, newSeed )
-
-        ( shipsToBeAdded, newSeed ) =
-            List.foldl (foldGamepad model.ships) ( [], model.seed ) gamepads
+        newGame =
+            model.game
+                |> apply gamepadShip shipsAndGamepads
+                |> apply removeShip shipsWithoutGamepad
+                |> apply addShip gamepadsWithoutShip
+                |> Game.update (Game.Tick dt)
     in
-        Model (shipsAlreadyPresent ++ shipsToBeAdded) newSeed ! []
+        { model | game = newGame } ! []
 
 
 
@@ -104,12 +96,12 @@ update msg model =
             model ! []
 
         AnimationFrameAndGamepads ( dt, gamepads ) ->
-            iterateTime dt gamepads model
+            animationFrame dt gamepads model
 
 
 init : Int -> ( Model, Cmd Msg )
 init dateNow =
-    Model [] (Random.initialSeed dateNow) ! []
+    Model (Game.init <| Random.initialSeed dateNow) ! []
 
 
 view : Model -> Html Msg
@@ -118,7 +110,7 @@ view model =
         [ HA.class "ui"
         ]
         [ View.background
-        , Html.App.map (always Noop) (View.starSystemBox model.ships)
+        , Html.App.map (always Noop) (View.game model.game)
         ]
 
 

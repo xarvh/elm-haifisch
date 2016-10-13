@@ -1,7 +1,7 @@
 module Names exposing (..)
 
 import LexicalRandom
-import Random.Pcg as Random
+import Random as Random
 
 
 defaultLexicon =

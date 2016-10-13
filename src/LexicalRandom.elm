@@ -1,54 +1,17 @@
 module LexicalRandom
     exposing
-        ( Definition
-        , Lexicon
+        ( Lexicon
         , generator
         , capitalize
         , fromString
         )
 
-{-|
-
-Generate random names based on a lexicon
-
-```
-import LexicalRandom
-
-
-lexiconString =
-    """
-streetType
-    street,road,avenue,drive,parade,square,plaza
-
-namePrefix
-    Georg,Smiths,Johns
-
-nameSuffix
-    chester,ington,ton,roy
-
-surname
-    {namePrefix}son
-    {namePrefix}{nameSuffix}
-
-address
-    {surname} {streetType}
-"""
-
-
-streetNamesLexicon =
-    LexicalRandom.fromString lexiconString
-
-streetNamesRandomGenerator : Random.Pcg.Generator String
-streetNamesRandomGenerator =
-    LexicalRandom.generator (\key -> "[missing key`" ++ key ++ "`]") streetNamesLexicon "address"
-```
-
-
-
+{-| Generate random names based on a lexicon.
 -}
 
+import Array exposing (Array)
 import Dict exposing (Dict)
-import Random.Pcg as Random exposing (Generator)
+import Random
 import String
 import Regex as R
 
@@ -66,7 +29,30 @@ type alias Definition =
 
 
 type alias Lexicon =
-    Dict String (List Definition)
+    Dict String (Array Definition)
+
+
+
+-- Random helpers
+
+
+constant : a -> Random.Generator a
+constant value =
+    Random.map (\_ -> value) Random.bool
+
+
+combine : List (Random.Generator a) -> Random.Generator (List a)
+combine =
+    List.foldr (Random.map2 (::)) (constant [])
+
+
+choices : Random.Generator a -> Array (Random.Generator a) -> Random.Generator a
+choices default array =
+    (Random.int 0 <| Array.length array - 1)
+        `Random.andThen`
+            \index ->
+                Array.get index array
+                    |> Maybe.withDefault default
 
 
 {-| Generate a name given a lexicon and a key of that lexicon
@@ -74,48 +60,49 @@ type alias Lexicon =
     `(String -> String)` is a filler function, called when some definition references a key
     that does not exist in the lexicon.
     It will be called with the missing key as argument, and its return value will be used
-    as key value.
-    This can be used, for example, to provide key values from a custom dictionary.
+    as the key's value.
+    This can be used, for example, to provide values from a custom dictionary.
 
-    The filler function is also called to break possible infinite recursions caused by a keys.
+    The filler function is also called to break possible infinite recursions caused by a key.
 
 
     filler key =
         Dict.get key customKeys |> Maybe.withDefault key
 
     nameGenerator =
-        generator filler englishGibberishLexicon "properNoun"
+        LexicalRandom.generator filler englishGibberishLexicon "properNoun"
 
     ( name, seed ) =
-        Random.Pcg.step nameGenerator seed
+        Random.step nameGenerator seed
 -}
-generator : (String -> String) -> Lexicon -> String -> Generator String
+generator : (String -> String) -> Lexicon -> String -> Random.Generator String
 generator filler lexicon key =
     case Dict.get key lexicon of
         Nothing ->
             -- either the key is plain invalid, or it is stuck in a loop
-            Random.constant (filler key)
+            constant (filler key)
 
         Just definitions ->
             let
+                -- Remove used keys to prevent infinite recursion
                 reducedLexicon =
                     Dict.remove key lexicon
 
-                -- TODO: Hopefully we get Random.combine soon enough https://github.com/mgold/elm-random-pcg/pull/8#issuecomment-237470918
-                foldDefinition definitionFragment accumulatedGenerator =
-                    Random.map2 (++) accumulatedGenerator <|
-                        case definitionFragment of
-                            Key key ->
-                                generator filler reducedLexicon key
+                fragmentToGenerator fragment =
+                    case fragment of
+                        Key key ->
+                            generator filler reducedLexicon key
 
-                            Constant string ->
-                                Random.constant string
+                        Constant string ->
+                            constant string
 
-                definitionToGenerator : Definition -> Generator String
                 definitionToGenerator definition =
-                    List.foldl foldDefinition (Random.constant "") definition
+                    List.map fragmentToGenerator definition
+                        |> combine
+                        |> Random.map (String.join "")
             in
-                Random.choices <| List.map definitionToGenerator definitions
+                Array.map definitionToGenerator definitions
+                    |> choices (constant "")
 
 
 
@@ -157,12 +144,13 @@ fromString stringLexicon =
                         |> List.map String.trim
                         |> List.filter ((/=) "")
                         |> List.map stringToDefinition
+                        |> Array.fromList
 
                 existingDefinitions =
                     Dict.get key lexicon
-                        |> Maybe.withDefault []
+                        |> Maybe.withDefault Array.empty
             in
-                Dict.insert key (List.append existingDefinitions newDefinitions) lexicon
+                Dict.insert key (Array.append existingDefinitions newDefinitions) lexicon
 
         addLine : String -> ( String, Lexicon ) -> ( String, Lexicon )
         addLine line ( currentKey, lexicon ) =

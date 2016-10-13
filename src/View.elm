@@ -2,9 +2,14 @@ module View exposing (..)
 
 import Html as H exposing (Html)
 import Html.Attributes as HA
-import Ship exposing (Ship)
-import Svg as S
+import Game exposing (Ship, vectorToString)
+import String
+import Svg as S exposing (Svg)
 import Svg.Attributes as SA
+
+
+starSystemOuterRadius =
+    Game.starSystemOuterRadius
 
 
 
@@ -53,9 +58,183 @@ background =
 
 
 
+star =
+    S.circle
+        [ SA.cx "0"
+        , SA.cy "0"
+        , SA.r "0.02"
+        , SA.fill "#007"
+        , SA.stroke "#00f"
+        , SA.strokeWidth "0.002"
+        ]
+        []
 
-starSystemBox : List Ship -> Html Never
-starSystemBox ships =
+
+planet orbitRadius =
+    S.g
+        []
+        -- orbit
+        [ S.circle
+            [ SA.cx "0"
+            , SA.cy "0"
+            , SA.r <| toString orbitRadius
+            , SA.fill "none"
+            , SA.stroke "#00f"
+            , SA.strokeWidth "0.002"
+            ]
+            []
+          -- planet
+        , S.circle
+            [ SA.cx <| toString orbitRadius
+            , SA.cy "0"
+            , SA.r "0.005"
+            , SA.fill "#070"
+            , SA.stroke "#0f0"
+            , SA.strokeWidth "0.002"
+            ]
+            []
+          -- marker
+        , S.circle
+            [ SA.cx <| toString orbitRadius
+            , SA.cy "0"
+            , SA.r "0.03"
+            , SA.fill "none"
+            , SA.stroke "#0f0"
+            , SA.strokeWidth "0.003"
+            ]
+            []
+        ]
+
+
+outerWellMarker =
+    S.circle
+        [ SA.cx "0"
+        , SA.cy "0"
+        , SA.r <| toString starSystemOuterRadius
+        , SA.fill "none"
+        , SA.stroke "#007"
+        , SA.strokeWidth "0.006"
+        ]
+        []
+
+
+
+
+shipSvg ship =
+    S.g [] []
+
+
+
+shipView : Ship -> Svg Never
+shipView ship =
+    let
+        size =
+            0.03
+    in
+        S.g
+            [ SA.transform <|
+                String.join " " <|
+                    [ "translate(" ++ vectorToString ship.position ++ ")"
+                    , "scale(" ++ toString size ++ ")"
+                    ]
+            ]
+            [ shipSvg ship ]
+
+
+
+{-
+selectionCross uiShared game =
+    let
+        fleets =
+            Ui.selectedFleets uiShared game
+
+        addShip ship ( xs, ys ) =
+            ( V.getX ship.currentPosition :: xs, V.getY ship.currentPosition :: ys )
+
+        addFleet id fleet accum =
+            List.foldl addShip accum fleet.ships
+
+        ( xs, ys ) =
+            Dict.foldl addFleet ( [], [] ) fleets
+
+        spacing =
+            0.1
+
+        minX =
+            List.minimum xs |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+
+        maxX =
+            List.maximum xs |> Maybe.withDefault 0 |> (+) spacing |> min 1
+
+        minY =
+            List.minimum ys |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+
+        maxY =
+            List.maximum ys |> Maybe.withDefault 0 |> (+) spacing |> min 1
+
+        midX =
+            (maxX + minX) / 2
+
+        midY =
+            (maxY + minY) / 2
+
+        line x1 y1 x2 y2 =
+            S.line
+                [ SA.x1 <| toString x1
+                , SA.y1 <| toString y1
+                , SA.x2 <| toString x2
+                , SA.y2 <| toString y2
+                , SA.stroke "#0f0"
+                  --                 , SA.opacity "0.2"
+                , SA.strokeWidth "0.002"
+                ]
+                []
+    in
+        if Dict.isEmpty fleets then
+            []
+        else
+            -- left and right horizontal lines
+            [ line -1 midY minX midY
+            , line maxX midY 1 midY
+              -- vertical lines
+            , line midX -1 midX minY
+            , line midX maxY midX 1
+            ]
+-}
+
+
+viewbox model =
+    let
+        w = model.windowSizeInGameCoordinates.width
+        h = model.windowSizeInGameCoordinates.height
+    in
+        String.join " " <| List.map toString [-w/2, -h/2, w, h]
+
+
+
+view : List Ship -> Svg Never
+view ships =
+    S.svg
+--         [ SA.viewBox (viewbox model)
+        []
+    <|
+        List.concat <|
+            [ [ star ]
+            , [ planet <| starSystemOuterRadius / 3 ]
+            , [ outerWellMarker ]
+--             , (drawFleets asViewedByPlayerId game uiShared)
+            ]
+
+
+
+
+
+
+
+
+
+game : Game.Model -> Html Never
+game model =
     H.div
         [ HA.class "star-system-container full-window" ]
 --         [ StarSystemUi.view viewerPlayerId game model model.starSystemUi
