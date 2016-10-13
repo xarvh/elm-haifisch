@@ -26,6 +26,10 @@ shipSpeed =
     0.3 * starSystemOuterRadius / Time.second
 
 
+turningRate =
+    turns 1 / Time.second
+
+
 velocityControlThreshold =
     0.1
 
@@ -66,6 +70,23 @@ clampToRadius radius v =
             V.scale (radius / sqrt ll) v
 
 
+vectorToAngle v =
+    let
+        ( x, y ) =
+            V.toTuple v
+    in
+        atan2 y x
+
+
+normalizeAngle a =
+    if a < -pi then
+        a + 2 * pi
+    else if a > pi then
+        a - 2 * pi
+    else
+        a
+
+
 
 -- Ships
 
@@ -87,7 +108,7 @@ type alias Ship =
     , headingControl : Vector
     , position : Vector
     , velocity : Vector
-    , heading : Vector
+    , heading : Float
     , status : Status
     , name : String
     }
@@ -131,14 +152,26 @@ shipControl dt ship =
                     |> V.add (V.scale (shipSpeed * dt) ship.velocityControl)
                     |> clampToRadius starSystemOuterRadius
 
-        newHeading =
+        targetHeading =
             if ignoreHeadingControl then
                 if ignoreVelocityControl then
                     ship.heading
                 else
-                    ship.velocityControl
+                    vectorToAngle ship.velocityControl
             else
-                ship.headingControl
+                vectorToAngle ship.headingControl
+
+        deltaHeading =
+            (targetHeading - ship.heading)
+
+        maxTurn =
+            turningRate * dt
+
+        clampedDeltaAngle =
+            clamp -maxTurn maxTurn (normalizeAngle deltaHeading)
+
+        newHeading =
+            ship.heading + clampedDeltaAngle
     in
         { ship | position = newPosition, heading = newHeading }
 
@@ -156,7 +189,7 @@ makeShip controllerId position name =
     , velocityControl = v0
     , headingControl = v0
     , velocity = v0
-    , heading = V.negate <| V.normalize position
+    , heading = vectorToAngle <| V.negate position
     , position = position
     , name = name
     , status = Spawning 0
