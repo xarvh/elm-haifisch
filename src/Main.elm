@@ -19,6 +19,7 @@ import View
 
 type alias Model =
     { game : Game.Model
+    , hasGamepads : Bool
     , windowSizeInPixels : Window.Size
     , windowSizeInGameCoordinates : Game.Vector
     }
@@ -75,8 +76,7 @@ animationFrame dt gamepads model =
                 |> apply addShip gamepadsWithoutShip
                 |> Game.update (Game.Tick dt)
     in
-        { model | game = newGame } ! []
-
+        { model | game = newGame, hasGamepads = gamepads /= [] } ! []
 
 
 resizeWindow : Window.Size -> Model -> Model
@@ -119,10 +119,11 @@ update msg model =
 
 init : Int -> ( Model, Cmd Msg )
 init dateNow =
-    Model
-        (Game.init dateNow)
-        { width = 800, height = 600 }
-        (Game.vector 4 3)
+    { game = (Game.init dateNow)
+    , hasGamepads = False
+    , windowSizeInPixels = { width = 800, height = 600 }
+    , windowSizeInGameCoordinates = (Game.vector 4 3)
+    }
         ! [ Task.perform identity WindowResizes Window.size ]
 
 
@@ -133,6 +134,7 @@ view model =
         ]
         [ View.background
         , Html.App.map (always Noop) (View.game model.windowSizeInGameCoordinates model.game)
+        , View.splash model.hasGamepads
         ]
 
 
@@ -140,6 +142,10 @@ main =
     Html.App.programWithFlags
         { init = init
         , update = update
-        , subscriptions = \model -> Gamepad.animationFrameAndGamepads AnimationFrameAndGamepads
+        , subscriptions = \model ->
+            Sub.batch
+                [ Gamepad.animationFrameAndGamepads AnimationFrameAndGamepads
+                , Window.resizes WindowResizes
+                ]
         , view = view
         }

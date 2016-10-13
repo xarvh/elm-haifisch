@@ -16,6 +16,24 @@ starSystemOuterRadius =
 
 
 
+-- Splash
+
+
+splash hasControllers =
+    if hasControllers then
+        H.text ""
+    else
+        H.div
+            [ HA.class "splash" ]
+            [ H.h1
+                []
+                [ H.text "Haifisch" ]
+            , H.text
+                "No gamepads detected, you need at least TWO to play."
+            ]
+
+
+
 -- Decoration
 
 
@@ -251,7 +269,8 @@ shipView ship =
 
 viewbox worldSize =
     let
-        ( w, h ) = V.toTuple worldSize
+        ( w, h ) =
+            V.toTuple worldSize
     in
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
