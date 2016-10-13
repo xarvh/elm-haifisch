@@ -14,6 +14,17 @@ starSystemOuterRadius =
     1.0
 
 
+explosionDuration =
+    1000 * Time.millisecond
+
+
+spawnDuration =
+    0 * Time.second
+
+
+shipSpeed =
+    0.3 * starSystemOuterRadius / Time.second
+
 
 -- Linear Algebra helpers
 
@@ -26,6 +37,10 @@ vector =
     V.vec2
 
 
+v0 =
+    V.vec2 0 0
+
+
 vectorToString : Vector -> String
 vectorToString v =
     toString (V.getX v) ++ "," ++ toString (V.getY v)
@@ -36,21 +51,23 @@ vectorToString v =
 
 
 type alias ActiveModel =
-    { velocity : Vector
-    , gunCooldown : Time
+    { gunCooldown : Time
     }
 
 
 type Status
-    = Spawining Float
+    = Spawning Time
     | Active ActiveModel
-    | Exploding Float
+    | Exploding Time
 
 
 type alias Ship =
     { controllerId : Int
+    , velocityControl : Vector
+    , headingControl : Vector
     , position : Vector
-    , heading : Float
+    , velocity : Vector
+    , heading : Vector
     , status : Status
     , name : String
     }
@@ -86,11 +103,24 @@ randomPosition =
         (Random.float 0 (turns 1))
 
 
+
+makeShip controllerId position name =
+    { controllerId = controllerId
+    , velocityControl = v0
+    , headingControl = v0
+    , velocity = v0
+    , heading = V.negate <| V.normalize position
+    , position = position
+    , name = name
+    , status = Spawning 0
+    }
+
+
+
 randomShip : Int -> Random.Generator Ship
 randomShip controllerId =
     Random.map2
-        -- TODO: use something nicer as heading?
-        (\position name -> Ship controllerId position 0 (Spawining 0) name)
+        (makeShip controllerId)
         randomPosition
         Names.ship
 
@@ -105,6 +135,46 @@ addShip controllerId model =
             | shipsById = Dict.insert controllerId newShip model.shipsById
             , seed = newSeed
         }
+
+
+
+-- Tick
+
+
+shipTick dt id ship =
+    case ship.status of
+        -- TODO: allow the ship to move during spawn
+        Spawning oldElapsedTime ->
+            let
+                newElapsedTime =
+                    oldElapsedTime + dt
+
+                newStatus =
+                    if newElapsedTime > spawnDuration then
+                        Active { gunCooldown = 0 }
+                    else
+                        Spawning newElapsedTime
+            in
+                { ship | status = newStatus }
+
+        Active activeModel ->
+            let
+                newPosition =
+                    V.add ship.position <| V.scale (shipSpeed * dt) ship.velocityControl
+
+                length =
+                    V.length newPosition
+
+                clampedPosition =
+                    if length <= starSystemOuterRadius then
+                        newPosition
+                    else
+                        V.scale (starSystemOuterRadius / length) newPosition
+            in
+                { ship | position = clampedPosition }
+
+        Exploding elapsedTime ->
+            { ship | status = Exploding <| max explosionDuration (elapsedTime + dt) }
 
 
 
@@ -124,11 +194,18 @@ update msg model =
         AddShip controllerId ->
             addShip controllerId model
 
-        ControlShip ship ( movement, heading, isFiring ) ->
-            model
+        ControlShip ship ( velocity, heading, isFiring ) ->
+            let
+                newShip =
+                    { ship | velocityControl = velocity, headingControl = heading }
+
+                newShipsById =
+                    Dict.insert ship.controllerId newShip model.shipsById
+            in
+                { model | shipsById = newShipsById }
 
         RemoveShip ship ->
             model
 
         Tick dt ->
-            model
+            { model | shipsById = Dict.map (shipTick dt) model.shipsById }

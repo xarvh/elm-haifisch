@@ -26,16 +26,36 @@ type alias Model =
 
 
 
+-- Gamepad guessing
+
+
+guessGamepad gamepad =
+    case gamepad.axes of
+        -- Some Xbox 360 in Chrom
+        xLeftStick :: yLeftStick :: xRightStick :: yRightStick :: [] ->
+            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, False )
+
+        xLeftStick :: yLeftStick :: leftTrigger :: xRightStick :: yRightStick :: yRightTrigger :: [] ->
+            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, False )
+
+        -- Xbox 360 in Firefox
+        xLeftStick :: yLeftStick :: leftTrigger :: xRightStick :: yRightStick :: yRightTrigger :: xPad :: yPad :: [] ->
+            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, False )
+
+        _ ->
+            ( vector 0 0, vector 0 0, False )
+
+
+
 -- Game logic
 
 
 gamepadToCommand gamepad =
-    -- TODO
-    ( vector 0 0, vector 0 0, False )
+    guessGamepad gamepad
 
 
 gamepadShip ( ship, gamepad ) =
-    Game.update <| Game.ControlShip ship <| gamepadToCommand gamepad
+    Game.update <| Game.ControlShip ship <| guessGamepad gamepad
 
 
 removeShip ship =
@@ -114,7 +134,11 @@ update msg model =
             resizeWindow windowSize model ! []
 
         AnimationFrameAndGamepads ( dt, gamepads ) ->
-            animationFrame dt gamepads model
+            -- Work around a bug in Gamepad https://github.com/xarvh/elm-gamepad/issues/2
+            if dt < 0 then
+                model ! []
+            else
+                animationFrame dt gamepads model
 
 
 init : Int -> ( Model, Cmd Msg )
@@ -142,10 +166,11 @@ main =
     Html.App.programWithFlags
         { init = init
         , update = update
-        , subscriptions = \model ->
-            Sub.batch
-                [ Gamepad.animationFrameAndGamepads AnimationFrameAndGamepads
-                , Window.resizes WindowResizes
-                ]
+        , subscriptions =
+            \model ->
+                Sub.batch
+                    [ Gamepad.animationFrameAndGamepads AnimationFrameAndGamepads
+                    , Window.resizes WindowResizes
+                    ]
         , view = view
         }
