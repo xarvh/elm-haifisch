@@ -46,6 +46,16 @@ vectorToString v =
     toString (V.getX v) ++ "," ++ toString (V.getY v)
 
 
+clampToRadius radius v =
+    let
+        ll =
+            V.lengthSquared v
+    in
+        if ll <= radius then
+            v
+        else
+            V.scale ( radius / sqrt ll) v
+
 
 -- Ships
 
@@ -160,18 +170,11 @@ shipTick dt id ship =
         Active activeModel ->
             let
                 newPosition =
-                    V.add ship.position <| V.scale (shipSpeed * dt) ship.velocityControl
-
-                length =
-                    V.length newPosition
-
-                clampedPosition =
-                    if length <= starSystemOuterRadius then
-                        newPosition
-                    else
-                        V.scale (starSystemOuterRadius / length) newPosition
+                    ship.position
+                        |> V.add (V.scale (shipSpeed * dt) ship.velocityControl)
+                        |> clampToRadius starSystemOuterRadius
             in
-                { ship | position = clampedPosition }
+                { ship | position = newPosition }
 
         Exploding elapsedTime ->
             { ship | status = Exploding <| max explosionDuration (elapsedTime + dt) }
