@@ -107,7 +107,6 @@ type alias Ship =
     , velocityControl : Vector
     , headingControl : Vector
     , position : Vector
-    , velocity : Vector
     , heading : Float
     , status : Status
     , name : String
@@ -188,7 +187,6 @@ makeShip controllerId position name =
     { controllerId = controllerId
     , velocityControl = v0
     , headingControl = v0
-    , velocity = v0
     , heading = vectorToAngle <| V.negate position
     , position = position
     , name = name
