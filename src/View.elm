@@ -3,10 +3,11 @@ module View exposing (..)
 import Dict
 import Html as H exposing (Html)
 import Html.Attributes as HA
-import Game exposing (Ship, vectorToString)
+import Game exposing (Ship, Vector, vectorToString)
 import String
 import Svg as S exposing (Svg)
 import Svg.Attributes as SA
+import Math.Vector2 as V
 import Window
 
 
@@ -248,33 +249,29 @@ shipView ship =
 -}
 
 
-viewbox model =
+viewbox worldSize =
     let
-        w =
-            model.windowSizeInGameCoordinates.width
-
-        h =
-            model.windowSizeInGameCoordinates.height
+        ( w, h ) = V.toTuple worldSize
     in
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
-view : List Ship -> Svg Never
-view ships =
+view : Vector -> List Ship -> Svg Never
+view worldSize ships =
     S.svg
-        --         [ SA.viewBox (viewbox model)
-        []
+        [ SA.viewBox (viewbox worldSize)
+        ]
     <|
         [ star
         , planet (starSystemOuterRadius / 3)
         , outerWellMarker
         ]
-            ++ (List.map shipSvg ships)
+            ++ (List.map shipView ships)
 
 
-game : Window.Size -> Game.Model -> Html Never
-game windowSize model =
+game : Vector -> Game.Model -> Html Never
+game worldSize model =
     H.div
         [ HA.class "star-system-container full-window" ]
-        [ view (Dict.values model.shipsById)
+        [ view worldSize (Dict.values model.shipsById)
         ]

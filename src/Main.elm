@@ -19,7 +19,8 @@ import View
 
 type alias Model =
     { game : Game.Model
-    , windowSize : Window.Size
+    , windowSizeInPixels : Window.Size
+    , windowSizeInGameCoordinates : Game.Vector
     }
 
 
@@ -78,6 +79,22 @@ animationFrame dt gamepads model =
 
 
 
+resizeWindow : Window.Size -> Model -> Model
+resizeWindow sizeInPixels model =
+    let
+        internalCoordinatesHeight =
+            Game.starSystemOuterRadius * 2.1
+
+        internalCoordinatesWidth =
+            toFloat sizeInPixels.width * internalCoordinatesHeight / toFloat sizeInPixels.height
+    in
+        { model
+            | windowSizeInPixels = sizeInPixels
+            , windowSizeInGameCoordinates = Game.vector internalCoordinatesWidth internalCoordinatesHeight
+        }
+
+
+
 -- Boilerplate stuff
 
 
@@ -94,7 +111,7 @@ update msg model =
             model ! []
 
         WindowResizes windowSize ->
-            { model | windowSize = windowSize } ! []
+            resizeWindow windowSize model ! []
 
         AnimationFrameAndGamepads ( dt, gamepads ) ->
             animationFrame dt gamepads model
@@ -105,6 +122,7 @@ init dateNow =
     Model
         (Game.init dateNow)
         { width = 800, height = 600 }
+        (Game.vector 4 3)
         ! [ Task.perform identity WindowResizes Window.size ]
 
 
@@ -114,7 +132,7 @@ view model =
         [ HA.class "ui"
         ]
         [ View.background
-        , Html.App.map (always Noop) (View.game model.windowSize model.game)
+        , Html.App.map (always Noop) (View.game model.windowSizeInGameCoordinates model.game)
         ]
 
 

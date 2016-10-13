@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "summary": "Test for Elm+Websockets multiplayer",
+    "summary": "Silly gamepad-only game",
     "repository": "https://github.com/xarvh/elm-haifisch.git",
     "license": "GPL3",
     "source-directories": [
