@@ -4,6 +4,12 @@ body {
     overflow: hidden;
 }
 
+
+.splash {
+    position: absolute;
+    color: #0f0;
+}
+
 .ui {
     background: black;
 }
