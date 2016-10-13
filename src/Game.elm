@@ -88,6 +88,15 @@ normalizeAngle a =
 
 
 
+-- Game Effects
+
+
+type Effect
+    = SpawnProjectile ()
+    | RemoveShip Int
+
+
+
 -- Ships
 
 
@@ -135,7 +144,13 @@ init seed =
 -- Game logic
 
 
-shipControl dt ship =
+shipFireControl : Time -> ActiveModel -> Ship -> ( Ship, List Effect )
+shipFireControl dt activeModel ship =
+    ( ship, [] )
+
+
+shipMovementControl : Time -> Ship -> Ship
+shipMovementControl dt ship =
     let
         ignoreVelocityControl =
             V.length ship.velocityControl < velocityControlThreshold
@@ -223,27 +238,90 @@ addShip controllerId model =
 -- Tick
 
 
-shipTick dt id ship =
+noEffect ship =
+    ( ship, [] )
+
+
+shipSpawnTick : Time -> Time -> Ship -> Ship
+shipSpawnTick dt oldElapsedTime ship =
+    let
+        newElapsedTime =
+            oldElapsedTime + dt
+
+        newStatus =
+            if newElapsedTime > spawnDuration then
+                Active { gunCooldown = 0 }
+            else
+                Spawning newElapsedTime
+    in
+        { ship | status = newStatus }
+
+
+shipExplodeTick : Time -> Time -> Ship -> ( Ship, List Effect )
+shipExplodeTick dt oldElapsedTime ship =
+    let
+        newElapsedTime =
+            oldElapsedTime + dt
+
+        newStatus =
+            Exploding <| min explosionDuration newElapsedTime
+
+        effects =
+            if newElapsedTime >= explosionDuration then
+                [ RemoveShip ship.controllerId ]
+            else
+                []
+    in
+        ( { ship | status = newStatus }, effects )
+
+
+shipTick : Time -> Ship -> ( Ship, List Effect )
+shipTick dt ship =
     case ship.status of
         -- TODO: allow the ship to move during spawn
         Spawning oldElapsedTime ->
-            let
-                newElapsedTime =
-                    oldElapsedTime + dt
-
-                newStatus =
-                    if newElapsedTime > spawnDuration then
-                        Active { gunCooldown = 0 }
-                    else
-                        Spawning newElapsedTime
-            in
-                { ship | status = newStatus }
+            ship
+                |> shipMovementControl dt
+                |> shipSpawnTick dt oldElapsedTime
+                |> noEffect
 
         Active activeModel ->
-            shipControl dt ship
+            ship
+                |> shipMovementControl dt
+                |> shipFireControl dt activeModel
 
         Exploding elapsedTime ->
-            { ship | status = Exploding <| max explosionDuration (elapsedTime + dt) }
+            ship
+                |> shipExplodeTick dt elapsedTime
+
+
+applyEffect : Effect -> Model -> Model
+applyEffect effect model =
+    case effect of
+        SpawnProjectile _ ->
+            model
+
+        RemoveShip controllerId ->
+            { model | shipsById = Dict.remove controllerId model.shipsById }
+
+
+tick : Time -> Model -> Model
+tick dt oldModel =
+    let
+        folder id oldShip ( shipsById, effects ) =
+            let
+                ( newShip, newEffects ) =
+                    shipTick dt oldShip
+            in
+                ( Dict.insert id newShip shipsById, newEffects ++ effects )
+
+        ( tickedShipsById, effects ) =
+            Dict.foldl folder ( Dict.empty, [] ) oldModel.shipsById
+
+        newModel =
+            List.foldl applyEffect { oldModel | shipsById = tickedShipsById } effects
+    in
+        newModel
 
 
 
@@ -252,9 +330,14 @@ shipTick dt id ship =
 
 type Msg
     = ControlShip Ship ( Vector, Vector, Bool )
-    | RemoveShip Ship
+    | KillShip Ship
     | AddShip Int
     | Tick Time
+
+
+updateShip : Ship -> Model -> Model
+updateShip ship model =
+    { model | shipsById = Dict.insert ship.controllerId ship model.shipsById }
 
 
 update : Msg -> Model -> Model
@@ -264,17 +347,20 @@ update msg model =
             addShip controllerId model
 
         ControlShip ship ( velocity, heading, isFiring ) ->
+            updateShip { ship | velocityControl = velocity, headingControl = heading } model
+
+        KillShip ship ->
             let
-                newShip =
-                    { ship | velocityControl = velocity, headingControl = heading }
+                -- TODO is there a better do this pattern matching?
+                newStatus =
+                    case ship.status of
+                        Exploding elapsedTime ->
+                            ship.status
 
-                newShipsById =
-                    Dict.insert ship.controllerId newShip model.shipsById
+                        _ ->
+                            Exploding 0
             in
-                { model | shipsById = newShipsById }
-
-        RemoveShip ship ->
-            model
+                updateShip { ship | status = newStatus } model
 
         Tick dt ->
-            { model | shipsById = Dict.map (shipTick dt) model.shipsById }
+            tick dt model

@@ -59,7 +59,7 @@ gamepadShip ( ship, gamepad ) =
 
 
 removeShip ship =
-    Game.update (Game.RemoveShip ship)
+    Game.update (Game.KillShip ship)
 
 
 addShip gamepad =
