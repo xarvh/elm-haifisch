@@ -1,16 +1,21 @@
 module View exposing (..)
 
+import Dict
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Game exposing (Ship, vectorToString)
 import String
 import Svg as S exposing (Svg)
 import Svg.Attributes as SA
+import Window
 
 
 starSystemOuterRadius =
     Game.starSystemOuterRadius
 
+
+
+-- Decoration
 
 
 background =
@@ -55,7 +60,6 @@ background =
                 ]
                 []
             ]
-
 
 
 star =
@@ -119,10 +123,51 @@ outerWellMarker =
 
 
 
+-- SHIPS
+
 
 shipSvg ship =
-    S.g [] []
+    let
+        isFriendly =
+            True
 
+        isSelected =
+            False
+
+        stroke =
+            if isFriendly then
+                "#0f0"
+            else
+                "#f00"
+
+        fill =
+            if isSelected then
+                stroke
+            else if isFriendly then
+                "#088"
+            else
+                "#900"
+
+        strokeWidth =
+            "0.15"
+    in
+        S.path
+            [ SA.transform <| "rotate(" ++ toString (ship.heading / degrees 1) ++ ")"
+            , SA.d """
+            M -0.3,0
+            L -0.5, -0.5
+            L 1, 0
+            L -0.5, +0.5
+            Z
+            """
+            , SA.style <|
+                String.join "; " <|
+                    [ "fill: " ++ fill
+                    , "stroke: " ++ stroke
+                    , "stroke-width: " ++ strokeWidth
+                    ]
+            ]
+            []
 
 
 shipView : Ship -> Svg Never
@@ -143,100 +188,93 @@ shipView ship =
 
 
 {-
-selectionCross uiShared game =
-    let
-        fleets =
-            Ui.selectedFleets uiShared game
+   selectionCross uiShared game =
+       let
+           fleets =
+               Ui.selectedFleets uiShared game
 
-        addShip ship ( xs, ys ) =
-            ( V.getX ship.currentPosition :: xs, V.getY ship.currentPosition :: ys )
+           addShip ship ( xs, ys ) =
+               ( V.getX ship.currentPosition :: xs, V.getY ship.currentPosition :: ys )
 
-        addFleet id fleet accum =
-            List.foldl addShip accum fleet.ships
+           addFleet id fleet accum =
+               List.foldl addShip accum fleet.ships
 
-        ( xs, ys ) =
-            Dict.foldl addFleet ( [], [] ) fleets
+           ( xs, ys ) =
+               Dict.foldl addFleet ( [], [] ) fleets
 
-        spacing =
-            0.1
+           spacing =
+               0.1
 
-        minX =
-            List.minimum xs |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+           minX =
+               List.minimum xs |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
 
-        maxX =
-            List.maximum xs |> Maybe.withDefault 0 |> (+) spacing |> min 1
+           maxX =
+               List.maximum xs |> Maybe.withDefault 0 |> (+) spacing |> min 1
 
-        minY =
-            List.minimum ys |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
+           minY =
+               List.minimum ys |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
 
-        maxY =
-            List.maximum ys |> Maybe.withDefault 0 |> (+) spacing |> min 1
+           maxY =
+               List.maximum ys |> Maybe.withDefault 0 |> (+) spacing |> min 1
 
-        midX =
-            (maxX + minX) / 2
+           midX =
+               (maxX + minX) / 2
 
-        midY =
-            (maxY + minY) / 2
+           midY =
+               (maxY + minY) / 2
 
-        line x1 y1 x2 y2 =
-            S.line
-                [ SA.x1 <| toString x1
-                , SA.y1 <| toString y1
-                , SA.x2 <| toString x2
-                , SA.y2 <| toString y2
-                , SA.stroke "#0f0"
-                  --                 , SA.opacity "0.2"
-                , SA.strokeWidth "0.002"
-                ]
-                []
-    in
-        if Dict.isEmpty fleets then
-            []
-        else
-            -- left and right horizontal lines
-            [ line -1 midY minX midY
-            , line maxX midY 1 midY
-              -- vertical lines
-            , line midX -1 midX minY
-            , line midX maxY midX 1
-            ]
+           line x1 y1 x2 y2 =
+               S.line
+                   [ SA.x1 <| toString x1
+                   , SA.y1 <| toString y1
+                   , SA.x2 <| toString x2
+                   , SA.y2 <| toString y2
+                   , SA.stroke "#0f0"
+                     --                 , SA.opacity "0.2"
+                   , SA.strokeWidth "0.002"
+                   ]
+                   []
+       in
+           if Dict.isEmpty fleets then
+               []
+           else
+               -- left and right horizontal lines
+               [ line -1 midY minX midY
+               , line maxX midY 1 midY
+                 -- vertical lines
+               , line midX -1 midX minY
+               , line midX maxY midX 1
+               ]
 -}
 
 
 viewbox model =
     let
-        w = model.windowSizeInGameCoordinates.width
-        h = model.windowSizeInGameCoordinates.height
-    in
-        String.join " " <| List.map toString [-w/2, -h/2, w, h]
+        w =
+            model.windowSizeInGameCoordinates.width
 
+        h =
+            model.windowSizeInGameCoordinates.height
+    in
+        String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
 view : List Ship -> Svg Never
 view ships =
     S.svg
---         [ SA.viewBox (viewbox model)
+        --         [ SA.viewBox (viewbox model)
         []
     <|
-        List.concat <|
-            [ [ star ]
-            , [ planet <| starSystemOuterRadius / 3 ]
-            , [ outerWellMarker ]
---             , (drawFleets asViewedByPlayerId game uiShared)
-            ]
+        [ star
+        , planet (starSystemOuterRadius / 3)
+        , outerWellMarker
+        ]
+            ++ (List.map shipSvg ships)
 
 
-
-
-
-
-
-
-
-game : Game.Model -> Html Never
-game model =
+game : Window.Size -> Game.Model -> Html Never
+game windowSize model =
     H.div
         [ HA.class "star-system-container full-window" ]
---         [ StarSystemUi.view viewerPlayerId game model model.starSystemUi
---             |> App.map ToStarSystemUiMsg
-        []
+        [ view (Dict.values model.shipsById)
+        ]

@@ -1,4 +1,4 @@
-var _xarvh$elm_gamepad$Native_Gamepad = function() {
+var _xarvh$elm_haifisch$Native_Gamepad = function() {
 
 
     var Task = _elm_lang$core$Native_Scheduler;

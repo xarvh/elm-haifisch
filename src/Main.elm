@@ -8,10 +8,8 @@ import Html.Attributes as HA
 import Html.App
 import List.Extra
 import Random
-
-
--- import Random.Extra
-
+import Task
+import Window
 import Time exposing (Time)
 import View
 
@@ -21,6 +19,7 @@ import View
 
 type alias Model =
     { game : Game.Model
+    , windowSize : Window.Size
     }
 
 
@@ -43,8 +42,6 @@ removeShip ship =
 
 addShip gamepad =
     Game.update (Game.AddShip gamepad.index)
-
-
 
 
 animationFrame : Time -> List Gamepad -> Model -> ( Model, Cmd Msg )
@@ -86,6 +83,7 @@ animationFrame dt gamepads model =
 
 type Msg
     = Noop
+    | WindowResizes Window.Size
     | AnimationFrameAndGamepads ( Time, List Gamepad )
 
 
@@ -95,13 +93,19 @@ update msg model =
         Noop ->
             model ! []
 
+        WindowResizes windowSize ->
+            { model | windowSize = windowSize } ! []
+
         AnimationFrameAndGamepads ( dt, gamepads ) ->
             animationFrame dt gamepads model
 
 
 init : Int -> ( Model, Cmd Msg )
 init dateNow =
-    Model (Game.init <| Random.initialSeed dateNow) ! []
+    Model
+        (Game.init dateNow)
+        { width = 800, height = 600 }
+        ! [ Task.perform identity WindowResizes Window.size ]
 
 
 view : Model -> Html Msg
@@ -110,7 +114,7 @@ view model =
         [ HA.class "ui"
         ]
         [ View.background
-        , Html.App.map (always Noop) (View.game model.game)
+        , Html.App.map (always Noop) (View.game model.windowSize model.game)
         ]
 
 

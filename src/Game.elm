@@ -50,6 +50,7 @@ type Status
 type alias Ship =
     { controllerId : Int
     , position : Vector
+    , heading : Float
     , status : Status
     , name : String
     }
@@ -70,12 +71,10 @@ type alias Model =
 
 
 init seed =
-    Model Dict.empty seed
+    Model Dict.empty (Random.initialSeed seed)
 
 
 
--- initShip controllerId =
---     Ship controllerId (Ship.vector 0 0) (Ship.Spawining 0) ""
 -- Game logic
 
 
@@ -90,7 +89,8 @@ randomPosition =
 randomShip : Int -> Random.Generator Ship
 randomShip controllerId =
     Random.map2
-        (\position name -> Ship controllerId position (Spawining 0) name)
+        -- TODO: use something nicer as heading?
+        (\position name -> Ship controllerId position 0 (Spawining 0) name)
         randomPosition
         Names.ship
 
