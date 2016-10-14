@@ -3,7 +3,7 @@ module View exposing (..)
 import Dict
 import Html as H exposing (Html)
 import Html.Attributes as HA
-import Game exposing (Ship, Vector, vectorToString)
+import Game exposing (Ship, Projectile, Vector, vectorToString)
 import String
 import Svg as S exposing (Svg)
 import Svg.Attributes as SA
@@ -14,6 +14,8 @@ import Window
 worldRadius =
     Game.worldRadius
 
+projectileRadius =
+    0.01
 
 
 -- Splash
@@ -211,6 +213,38 @@ shipView ship =
             [ shipSvg ship ]
 
 
+-- Projectiles
+
+projectileSvg p =
+        S.circle
+            [ SA.cx <| toString <| V.getX p.position
+            , SA.cy <| toString <| V.getY p.position
+            , SA.r "0.5"
+            , SA.fill "#0a0"
+            , SA.stroke "#0f0"
+            , SA.strokeWidth "0.1"
+            ]
+            []
+
+
+
+projectileView : Projectile -> Svg Never
+projectileView p =
+    let
+        size =
+            0.01
+    in
+        S.g
+            [ SA.transform <|
+                String.join " " <|
+                    [ "translate(" ++ vectorToString p.position ++ ")"
+                    , "scale(" ++ toString size ++ ")"
+                    ]
+            ]
+            [ projectileSvg p ]
+
+
+
 
 {-
    selectionCross uiShared game =
@@ -281,8 +315,8 @@ viewbox worldSize =
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
-view : Vector -> List Ship -> Svg Never
-view worldSize ships =
+view : Vector -> Game.Model -> Svg Never
+view worldSize model =
     S.svg
         [ SA.viewBox (viewbox worldSize)
         ]
@@ -291,12 +325,13 @@ view worldSize ships =
         , planet (worldRadius / 3)
         , outerWellMarker
         ]
-            ++ (List.map shipView ships)
+            ++ (List.map shipView (Dict.values model.shipsById))
+            ++ (List.map projectileView model.projectiles)
 
 
 game : Vector -> Game.Model -> Html Never
 game worldSize model =
     H.div
         [ HA.class "star-system-container full-window" ]
-        [ view worldSize (Dict.values model.shipsById)
+        [ view worldSize model
         ]

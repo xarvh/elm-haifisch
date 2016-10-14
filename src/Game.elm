@@ -1,6 +1,7 @@
 module Game exposing (..)
 
 import Dict exposing (Dict)
+import List.Extra
 import Math.Vector2 as V
 import Names
 import Time exposing (Time)
@@ -27,7 +28,7 @@ shipSpeed =
     0.3 * worldRadius / Time.second
 
 
-turningRate =
+shipTurningRate =
     turns 1 / Time.second
 
 
@@ -40,7 +41,11 @@ headingControlThreshold =
 
 
 fireReloadTime =
-    1 * Time.second
+    0.3 * Time.second
+
+
+projectileSpeed =
+    1 * worldRadius / Time.second
 
 
 
@@ -64,6 +69,7 @@ vectorToString v =
     toString (V.getX v) ++ "," ++ toString (V.getY v)
 
 
+clampToRadius : Float -> Vector -> Vector
 clampToRadius radius v =
     let
         ll =
@@ -75,12 +81,18 @@ clampToRadius radius v =
             V.scale (radius / sqrt ll) v
 
 
+vectorToAngle : Vector -> Float
 vectorToAngle v =
     let
         ( x, y ) =
             V.toTuple v
     in
         atan2 y x
+
+
+angleToVector : Float -> Vector
+angleToVector a =
+    vector (cos a) (sin a)
 
 
 normalizeAngle a =
@@ -98,6 +110,8 @@ normalizeAngle a =
 
 type Effect
     = SpawnProjectile Projectile
+      -- TODO should use an id
+    | RemoveProjectile Projectile
     | RemoveShip Int
 
 
@@ -215,7 +229,7 @@ shipMovementControl dt ship =
             normalizeAngle <| targetHeading - ship.heading
 
         maxTurn =
-            turningRate * dt
+            shipTurningRate * dt
 
         clampedDeltaAngle =
             clamp -maxTurn maxTurn deltaHeading
@@ -327,11 +341,32 @@ shipTick dt ship =
                 |> shipExplodeTick dt elapsedTime
 
 
+projectileTick : Time -> Projectile -> ( Projectile, List Effect )
+projectileTick dt projectile =
+    let
+        newPosition =
+            V.add projectile.position <| V.scale (projectileSpeed * dt) (angleToVector projectile.heading)
+
+        newProjectile =
+            { projectile | position = newPosition }
+
+        effects =
+            if V.length newPosition > worldRadius then
+                [ RemoveProjectile newProjectile ]
+            else
+                []
+    in
+        ( newProjectile, effects )
+
+
 applyEffect : Effect -> Model -> Model
 applyEffect effect model =
     case effect of
         SpawnProjectile projectile ->
             { model | projectiles = projectile :: model.projectiles }
+
+        RemoveProjectile projectile ->
+            { model | projectiles = List.Extra.remove projectile model.projectiles }
 
         RemoveShip controllerId ->
             { model | shipsById = Dict.remove controllerId model.shipsById }
@@ -347,11 +382,27 @@ tick dt oldModel =
             in
                 ( Dict.insert id newShip shipsById, newEffects ++ effects )
 
-        ( tickedShipsById, effects ) =
+        ( tickedShipsById, shipEffects ) =
             Dict.foldl folder ( Dict.empty, [] ) oldModel.shipsById
 
+        projectileFolder oldProj ( projs, effects ) =
+            let
+                ( newProjectile, newEffects ) =
+                    projectileTick dt oldProj
+            in
+                ( newProjectile :: projs, newEffects ++ effects )
+
+        ( tickedProjectiles, projectileEffects ) =
+            List.foldl projectileFolder ( [], [] ) oldModel.projectiles
+
+        tickedModel =
+            { oldModel
+                | shipsById = tickedShipsById
+                , projectiles = tickedProjectiles
+            }
+
         newModel =
-            List.foldl applyEffect { oldModel | shipsById = tickedShipsById } effects
+            List.foldl applyEffect tickedModel (shipEffects ++ projectileEffects)
     in
         newModel
 
