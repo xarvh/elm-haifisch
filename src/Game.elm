@@ -8,9 +8,10 @@ import Random
 
 
 -- Global constants
+-- This is used as unit measure of length
 
 
-starSystemOuterRadius =
+worldRadius =
     1.0
 
 
@@ -23,7 +24,7 @@ spawnDuration =
 
 
 shipSpeed =
-    0.3 * starSystemOuterRadius / Time.second
+    0.3 * worldRadius / Time.second
 
 
 turningRate =
@@ -36,6 +37,10 @@ velocityControlThreshold =
 
 headingControlThreshold =
     0.3
+
+
+fireReloadTime =
+    1 * Time.second
 
 
 
@@ -92,7 +97,7 @@ normalizeAngle a =
 
 
 type Effect
-    = SpawnProjectile ()
+    = SpawnProjectile Projectile
     | RemoveShip Int
 
 
@@ -115,10 +120,18 @@ type alias Ship =
     { controllerId : Int
     , velocityControl : Vector
     , headingControl : Vector
+    , fireControl : Bool
     , position : Vector
     , heading : Float
     , status : Status
     , name : String
+    }
+
+
+type alias Projectile =
+    { ownerControllerId : Int
+    , position : Vector
+    , heading : Float
     }
 
 
@@ -128,6 +141,7 @@ type alias Ship =
 
 type alias Model =
     { shipsById : Dict Int Ship
+    , projectiles : List Projectile
     , seed : Random.Seed
     }
 
@@ -137,16 +151,33 @@ type alias Model =
 
 
 init seed =
-    Model Dict.empty (Random.initialSeed seed)
+    Model Dict.empty [] (Random.initialSeed seed)
 
 
 
 -- Game logic
 
 
+newProjectile ship =
+    { ownerControllerId = ship.controllerId
+    , position = ship.position
+    , heading = ship.heading
+    }
+
+
 shipFireControl : Time -> ActiveModel -> Ship -> ( Ship, List Effect )
-shipFireControl dt activeModel ship =
-    ( ship, [] )
+shipFireControl dt { gunCooldown } ship =
+    let
+        ( cooldown, effects ) =
+            if ship.fireControl && gunCooldown == 0 then
+                ( fireReloadTime, [ SpawnProjectile (newProjectile ship) ] )
+            else
+                ( max 0 (gunCooldown - dt), [] )
+
+        newStatus =
+            Active { gunCooldown = cooldown }
+    in
+        ( { ship | status = newStatus }, effects )
 
 
 shipMovementControl : Time -> Ship -> Ship
@@ -169,7 +200,7 @@ shipMovementControl dt ship =
                 in
                     ship.position
                         |> V.add (V.scale (f * shipSpeed * dt) ship.velocityControl)
-                        |> clampToRadius starSystemOuterRadius
+                        |> clampToRadius worldRadius
 
         targetHeading =
             if ignoreHeadingControl then
@@ -199,7 +230,7 @@ randomPosition : Random.Generator Vector
 randomPosition =
     Random.map2
         (\r a -> vector (r * sin a) (r * cos a))
-        (Random.float 0 starSystemOuterRadius)
+        (Random.float 0 worldRadius)
         (Random.float 0 (turns 1))
 
 
@@ -207,6 +238,7 @@ makeShip controllerId position name =
     { controllerId = controllerId
     , velocityControl = v0
     , headingControl = v0
+    , fireControl = False
     , heading = vectorToAngle <| V.negate position
     , position = position
     , name = name
@@ -298,8 +330,8 @@ shipTick dt ship =
 applyEffect : Effect -> Model -> Model
 applyEffect effect model =
     case effect of
-        SpawnProjectile _ ->
-            model
+        SpawnProjectile projectile ->
+            { model | projectiles = projectile :: model.projectiles }
 
         RemoveShip controllerId ->
             { model | shipsById = Dict.remove controllerId model.shipsById }
@@ -347,7 +379,7 @@ update msg model =
             addShip controllerId model
 
         ControlShip ship ( velocity, heading, isFiring ) ->
-            updateShip { ship | velocityControl = velocity, headingControl = heading } model
+            updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
 
         KillShip ship ->
             let

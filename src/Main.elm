@@ -29,18 +29,22 @@ type alias Model =
 -- Gamepad guessing
 
 
+anyButton buttons =
+    List.any fst buttons
+
+
 guessGamepad gamepad =
     case gamepad.axes of
         -- Some Xbox 360 in Chrom
         xLeftStick :: yLeftStick :: xRightStick :: yRightStick :: [] ->
-            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, False )
+            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, anyButton gamepad.buttons )
 
         xLeftStick :: yLeftStick :: leftTrigger :: xRightStick :: yRightStick :: yRightTrigger :: [] ->
-            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, False )
+            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, anyButton gamepad.buttons )
 
         -- Xbox 360 in Firefox
         xLeftStick :: yLeftStick :: leftTrigger :: xRightStick :: yRightStick :: yRightTrigger :: xPad :: yPad :: [] ->
-            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, False )
+            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, anyButton gamepad.buttons )
 
         _ ->
             ( vector 0 0, vector 0 0, False )
@@ -103,7 +107,7 @@ resizeWindow : Window.Size -> Model -> Model
 resizeWindow sizeInPixels model =
     let
         internalCoordinatesHeight =
-            Game.starSystemOuterRadius * 2.1
+            Game.worldRadius * 2.1
 
         internalCoordinatesWidth =
             toFloat sizeInPixels.width * internalCoordinatesHeight / toFloat sizeInPixels.height

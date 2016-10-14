@@ -11,8 +11,8 @@ import Math.Vector2 as V
 import Window
 
 
-starSystemOuterRadius =
-    Game.starSystemOuterRadius
+worldRadius =
+    Game.worldRadius
 
 
 
@@ -133,7 +133,7 @@ outerWellMarker =
     S.circle
         [ SA.cx "0"
         , SA.cy "0"
-        , SA.r <| toString starSystemOuterRadius
+        , SA.r <| toString worldRadius
         , SA.fill "none"
         , SA.stroke "#007"
         , SA.strokeWidth "0.006"
@@ -170,11 +170,11 @@ shipSvg ship =
         strokeWidth =
             "0.15"
 
---         ( hx, hy ) =
---             V.toTuple ship.heading
--- 
---         heading =
---             atan2 hy hx
+        --         ( hx, hy ) =
+        --             V.toTuple ship.heading
+        --
+        --         heading =
+        --             atan2 hy hx
     in
         S.path
             [ SA.transform <| "rotate(" ++ toString (ship.heading / degrees 1) ++ ")"
@@ -288,7 +288,7 @@ view worldSize ships =
         ]
     <|
         [ star
-        , planet (starSystemOuterRadius / 3)
+        , planet (worldRadius / 3)
         , outerWellMarker
         ]
             ++ (List.map shipView ships)
