@@ -172,7 +172,7 @@ init newDate =
     in
         { shipsById = Dict.empty
         , projectiles = []
-        , colorOffset = fst <| Random.step (Random.int 0 9999) seed
+        , colorOffset = fst <| Random.step (Random.int 0 Random.maxInt) seed
         , seed = seed
         }
 

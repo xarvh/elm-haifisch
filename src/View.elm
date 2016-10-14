@@ -5,6 +5,7 @@ import Dict
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Game exposing (Ship, Projectile, Vector, vectorToString)
+import Random
 import String
 import Svg as S exposing (Svg)
 import Svg.Attributes as SA
@@ -30,19 +31,25 @@ projectileRadius =
 
 playerColorsArray =
     Array.fromList
-        -- stroke, fill
+        -- bright, dark
         [ ( "#f00", "#900" )
-        , ( "#0f0", "#088" )
+        , ( "#0f0", "#090" )
+        , ( "#00f", "#009" )
+        , ( "#0ff", "#099" )
+        , ( "#f0f", "#909" )
+        , ( "#ff0", "#990" )
         ]
 
 
 playerColor : Int -> Int -> ( String, String )
 playerColor colorOffset controllerId =
     let
-        index =
-            (colorOffset + controllerId) % Array.length playerColorsArray
+        -- It seems like colorOffset is always divisible by 2 -_-
+        off =
+            floor <| (toFloat colorOffset / toFloat Random.maxInt) * (toFloat <| Array.length playerColorsArray)
 
-        q = Debug.log "" (index, colorOffset, controllerId, Array.length playerColorsArray)
+        index =
+            (off + controllerId) % Array.length playerColorsArray
     in
         Array.get index playerColorsArray
             |> Maybe.withDefault ( "", "" )
@@ -180,17 +187,11 @@ outerWellMarker =
 
 shipSvg colorOffset ship =
     let
-        ( stroke, fill ) =
+        ( bright, dark ) =
             playerColor colorOffset ship.controllerId
 
         strokeWidth =
             "0.15"
-
-        --         ( hx, hy ) =
-        --             V.toTuple ship.heading
-        --
-        --         heading =
-        --             atan2 hy hx
     in
         S.path
             [ SA.transform <| "rotate(" ++ toString (ship.heading / degrees 1) ++ ")"
@@ -203,8 +204,8 @@ shipSvg colorOffset ship =
             """
             , SA.style <|
                 String.join "; " <|
-                    [ "fill: " ++ fill
-                    , "stroke: " ++ stroke
+                    [ "fill: " ++ dark
+                    , "stroke: " ++ bright
                     , "stroke-width: " ++ strokeWidth
                     ]
             ]
@@ -231,13 +232,17 @@ shipView colorOffset ship =
 -- Projectiles
 
 
-projectileSvg p =
+projectileSvg colorOffset p =
+    let
+        ( bright, dark ) =
+            playerColor colorOffset p.ownerControllerId
+    in
     S.circle
         [ SA.cx <| toString <| V.getX p.position
         , SA.cy <| toString <| V.getY p.position
         , SA.r "0.5"
-        , SA.fill "#0a0"
-        , SA.stroke "#0f0"
+        , SA.fill bright
+        , SA.stroke dark
         , SA.strokeWidth "0.1"
         ]
         []
@@ -256,7 +261,7 @@ projectileView colorOffset p =
                     , "scale(" ++ toString size ++ ")"
                     ]
             ]
-            [ projectileSvg p ]
+            [ projectileSvg colorOffset p ]
 
 
 
