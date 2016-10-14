@@ -1,5 +1,6 @@
 module View exposing (..)
 
+import Array
 import Dict
 import Html as H exposing (Html)
 import Html.Attributes as HA
@@ -11,11 +12,41 @@ import Math.Vector2 as V
 import Window
 
 
+-- TODO: this module is a mess, needs some reorganisation
+-- TODO: use Svg.Lazy?
+
+
 worldRadius =
     Game.worldRadius
 
+
 projectileRadius =
     0.01
+
+
+
+-- Player colors
+
+
+playerColorsArray =
+    Array.fromList
+        -- stroke, fill
+        [ ( "#f00", "#900" )
+        , ( "#0f0", "#088" )
+        ]
+
+
+playerColor : Int -> Int -> ( String, String )
+playerColor colorOffset controllerId =
+    let
+        index =
+            (colorOffset + controllerId) % Array.length playerColorsArray
+
+        q = Debug.log "" (index, colorOffset, controllerId, Array.length playerColorsArray)
+    in
+        Array.get index playerColorsArray
+            |> Maybe.withDefault ( "", "" )
+
 
 
 -- Splash
@@ -147,27 +178,10 @@ outerWellMarker =
 -- SHIPS
 
 
-shipSvg ship =
+shipSvg colorOffset ship =
     let
-        isFriendly =
-            True
-
-        isSelected =
-            False
-
-        stroke =
-            if isFriendly then
-                "#0f0"
-            else
-                "#f00"
-
-        fill =
-            if isSelected then
-                stroke
-            else if isFriendly then
-                "#088"
-            else
-                "#900"
+        ( stroke, fill ) =
+            playerColor colorOffset ship.controllerId
 
         strokeWidth =
             "0.15"
@@ -197,8 +211,8 @@ shipSvg ship =
             []
 
 
-shipView : Ship -> Svg Never
-shipView ship =
+shipView : Int -> Ship -> Svg Never
+shipView colorOffset ship =
     let
         size =
             0.03
@@ -210,26 +224,27 @@ shipView ship =
                     , "scale(" ++ toString size ++ ")"
                     ]
             ]
-            [ shipSvg ship ]
+            [ shipSvg colorOffset ship ]
+
 
 
 -- Projectiles
 
+
 projectileSvg p =
-        S.circle
-            [ SA.cx <| toString <| V.getX p.position
-            , SA.cy <| toString <| V.getY p.position
-            , SA.r "0.5"
-            , SA.fill "#0a0"
-            , SA.stroke "#0f0"
-            , SA.strokeWidth "0.1"
-            ]
-            []
+    S.circle
+        [ SA.cx <| toString <| V.getX p.position
+        , SA.cy <| toString <| V.getY p.position
+        , SA.r "0.5"
+        , SA.fill "#0a0"
+        , SA.stroke "#0f0"
+        , SA.strokeWidth "0.1"
+        ]
+        []
 
 
-
-projectileView : Projectile -> Svg Never
-projectileView p =
+projectileView : Int -> Projectile -> Svg Never
+projectileView colorOffset p =
     let
         size =
             0.01
@@ -242,7 +257,6 @@ projectileView p =
                     ]
             ]
             [ projectileSvg p ]
-
 
 
 
@@ -325,8 +339,8 @@ view worldSize model =
         , planet (worldRadius / 3)
         , outerWellMarker
         ]
-            ++ (List.map shipView (Dict.values model.shipsById))
-            ++ (List.map projectileView model.projectiles)
+            ++ (List.map (shipView model.colorOffset) (Dict.values model.shipsById))
+            ++ (List.map (projectileView model.colorOffset) model.projectiles)
 
 
 game : Vector -> Game.Model -> Html Never

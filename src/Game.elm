@@ -156,6 +156,7 @@ type alias Projectile =
 type alias Model =
     { shipsById : Dict Int Ship
     , projectiles : List Projectile
+    , colorOffset : Int
     , seed : Random.Seed
     }
 
@@ -164,8 +165,16 @@ type alias Model =
 -- Init
 
 
-init seed =
-    Model Dict.empty [] (Random.initialSeed seed)
+init newDate =
+    let
+        seed =
+            Random.initialSeed newDate
+    in
+        { shipsById = Dict.empty
+        , projectiles = []
+        , colorOffset = fst <| Random.step (Random.int 0 9999) seed
+        , seed = seed
+        }
 
 
 
