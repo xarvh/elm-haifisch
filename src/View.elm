@@ -15,6 +15,7 @@ import Window
 
 -- TODO: this module is a mess, needs some reorganisation
 -- TODO: use Svg.Lazy?
+-- TODO make background white with slightly darker hex cells
 
 
 worldRadius =
@@ -326,6 +327,28 @@ projectileView colorOffset p =
 -}
 
 
+thePoly =
+    case Game.thePoly of
+        x :: xs ->
+            S.path
+                [ SA.d
+                    <| "M " ++ vectorToString x ++ String.join " " (List.map (\v -> "L " ++ vectorToString v) xs) ++ " Z"
+
+                , SA.style <|
+                    String.join "; " <|
+                        [ "stroke: #fff"
+                        , "stroke-width: 0.002"
+                        , "fill: none"
+                        ]
+                ]
+                []
+        _ ->
+            S.g [][]
+
+
+
+---
+
 viewbox worldSize =
     let
         ( w, h ) =
@@ -343,6 +366,7 @@ view worldSize model =
         [ star
         , planet (worldRadius / 3)
         , outerWellMarker
+        , thePoly
         ]
             ++ (List.map (shipView model.colorOffset) (Dict.values model.shipsById))
             ++ (List.map (projectileView model.colorOffset) model.projectiles)

@@ -1,5 +1,6 @@
 module Game exposing (..)
 
+import Array
 import Dict exposing (Dict)
 import List.Extra
 import Math.Vector2 as V
@@ -102,6 +103,79 @@ normalizeAngle a =
         a - 2 * pi
     else
         a
+
+
+rightHandNormal v =
+    let
+        ( x, y ) =
+            V.toTuple v
+    in
+        vector -y x
+
+
+
+-- Collision detection
+-- TODO: Needs some optimization
+
+
+type alias Segment =
+    ( Vector, Vector )
+
+
+type alias Polygon =
+    List Vector
+
+
+anySegment : (( Vector, Vector ) -> Bool) -> Polygon -> Bool
+anySegment f poly =
+    let
+        a =
+            Array.fromList poly
+
+        get index =
+            Array.get (index % (Array.length a)) a |> Maybe.withDefault (vector 0 0)
+
+        segments =
+            List.indexedMap (\index v -> ( get index, get (index + 1) )) poly
+    in
+        List.any f segments
+
+
+normalIsSeparatingAxis q ( a, b ) =
+    let
+        n =
+            rightHandNormal <| V.sub b a
+
+        isRightSide p =
+            V.dot n (V.sub p a) > 0
+    in
+        List.all isRightSide q
+
+
+halfCollision : Polygon -> Polygon -> Bool
+halfCollision p q =
+    -- https://www.toptal.com/game/video-game-physics-part-ii-collision-detection-for-solid-objects
+    -- Try polygon p's normals as separating axies.
+    -- If any of them does separe the polys, then the two polys are NOT intersecting
+    not <| anySegment (normalIsSeparatingAxis q) p
+
+
+collisionPolygonVsPolygon : Polygon -> Polygon -> Bool
+collisionPolygonVsPolygon p q =
+    halfCollision p q && halfCollision q p
+
+
+collisionSegmentVsPolygon ( a, b ) p =
+    collisionPolygonVsPolygon [ a, b ] p
+
+
+thePoly =
+    List.map (V.scale <| 0.1 * worldRadius)
+        [ vector -1 -1
+        , vector -1 1
+        , vector 1 1
+        , vector 1 -1
+        ]
 
 
 
@@ -359,13 +433,19 @@ projectileTick dt projectile =
         newProjectile =
             { projectile | position = newPosition }
 
-        effects =
+        collisionEffets =
+            if collisionSegmentVsPolygon ( newPosition, projectile.position ) thePoly then
+                Debug.log "collision!" [ RemoveProjectile newProjectile ]
+            else
+                []
+
+        boundaryEffects =
             if V.length newPosition > worldRadius then
                 [ RemoveProjectile newProjectile ]
             else
                 []
     in
-        ( newProjectile, effects )
+        ( newProjectile, collisionEffets ++ boundaryEffects )
 
 
 applyEffect : Effect -> Model -> Model
