@@ -23,7 +23,11 @@ worldRadius =
 
 
 projectileRadius =
-    0.01
+    0.01 * worldRadius
+
+
+shipStrokWidth =
+    0.005 * worldRadius
 
 
 
@@ -186,47 +190,29 @@ outerWellMarker =
 -- SHIPS
 
 
-shipSvg colorOffset ship =
+ship : Int -> Ship -> Svg Never
+ship colorOffset ship =
     let
         ( bright, dark ) =
             playerColor colorOffset ship.controllerId
 
-        strokeWidth =
-            "0.15"
+        vertices =
+            Game.shipPolygon ship
+                |> List.map vectorToString
+
+        path =
+            "M " ++ (String.join " L " vertices) ++ " Z"
     in
         S.path
-            [ SA.transform <| "rotate(" ++ toString (ship.heading / degrees 1) ++ ")"
-            , SA.d """
-            M -0.3,0
-            L -0.5, -0.5
-            L 1, 0
-            L -0.5, +0.5
-            Z
-            """
+            [ SA.d path
             , SA.style <|
                 String.join "; " <|
                     [ "fill: " ++ dark
                     , "stroke: " ++ bright
-                    , "stroke-width: " ++ strokeWidth
+                    , "stroke-width: " ++ toString shipStrokWidth
                     ]
             ]
             []
-
-
-shipView : Int -> Ship -> Svg Never
-shipView colorOffset ship =
-    let
-        size =
-            0.03
-    in
-        S.g
-            [ SA.transform <|
-                String.join " " <|
-                    [ "translate(" ++ vectorToString ship.position ++ ")"
-                    , "scale(" ++ toString size ++ ")"
-                    ]
-            ]
-            [ shipSvg colorOffset ship ]
 
 
 
@@ -238,15 +224,15 @@ projectileSvg colorOffset p =
         ( bright, dark ) =
             playerColor colorOffset p.ownerControllerId
     in
-    S.circle
-        [ SA.cx <| toString <| V.getX p.position
-        , SA.cy <| toString <| V.getY p.position
-        , SA.r "0.5"
-        , SA.fill bright
-        , SA.stroke dark
-        , SA.strokeWidth "0.1"
-        ]
-        []
+        S.circle
+            [ SA.cx <| toString <| V.getX p.position
+            , SA.cy <| toString <| V.getY p.position
+            , SA.r "0.5"
+            , SA.fill bright
+            , SA.stroke dark
+            , SA.strokeWidth "0.1"
+            ]
+            []
 
 
 projectileView : Int -> Projectile -> Svg Never
@@ -331,9 +317,11 @@ thePoly =
     case Game.thePoly of
         x :: xs ->
             S.path
-                [ SA.d
-                    <| "M " ++ vectorToString x ++ String.join " " (List.map (\v -> "L " ++ vectorToString v) xs) ++ " Z"
-
+                [ SA.d <|
+                    "M "
+                        ++ vectorToString x
+                        ++ String.join " " (List.map (\v -> "L " ++ vectorToString v) xs)
+                        ++ " Z"
                 , SA.style <|
                     String.join "; " <|
                         [ "stroke: #fff"
@@ -342,12 +330,14 @@ thePoly =
                         ]
                 ]
                 []
+
         _ ->
-            S.g [][]
+            S.g [] []
 
 
 
 ---
+
 
 viewbox worldSize =
     let
@@ -368,7 +358,7 @@ view worldSize model =
         , outerWellMarker
         , thePoly
         ]
-            ++ (List.map (shipView model.colorOffset) (Dict.values model.shipsById))
+            ++ (List.map (ship model.colorOffset) (Dict.values model.shipsById))
             ++ (List.map (projectileView model.colorOffset) model.projectiles)
 
 
