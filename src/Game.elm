@@ -50,6 +50,30 @@ projectileSpeed =
 
 
 
+{-
+   Ship vertexes, clockwise from the rear
+    ___
+    \  --__
+    /__--
+
+-}
+
+
+shipTotalLength =
+    0.06 * worldRadius
+
+
+shipMesh =
+    List.map
+        (V.fromTuple >> V.scale (shipTotalLength / 15))
+        [ ( -3, 0 )
+        , ( -5, 5 )
+        , ( 10, 0 )
+        , ( -5, -5 )
+        ]
+
+
+
 -- Linear Algebra helpers
 
 
@@ -96,6 +120,7 @@ angleToVector a =
     vector (cos a) (sin a)
 
 
+normalizeAngle : Float -> Float
 normalizeAngle a =
     if a < -pi then
         a + 2 * pi
@@ -105,12 +130,30 @@ normalizeAngle a =
         a
 
 
+rightHandNormal : Vector -> Vector
 rightHandNormal v =
     let
         ( x, y ) =
             V.toTuple v
     in
         vector -y x
+
+
+rotateVector : Float -> Vector -> Vector
+rotateVector angle v =
+    let
+        ( x, y ) =
+            V.toTuple v
+
+        sinA =
+            sin angle
+
+        cosA =
+            cos angle
+    in
+        vector
+            (x * cosA - y * sinA)
+            (x * sinA + y * cosA)
 
 
 
@@ -186,6 +229,7 @@ type Effect
     = SpawnProjectile Projectile
       -- TODO should use an id
     | RemoveProjectile Projectile
+    | DamageShip Int
     | RemoveShip Int
 
 
@@ -221,6 +265,11 @@ type alias Projectile =
     , position : Vector
     , heading : Float
     }
+
+
+shipPolygon : Ship -> Polygon
+shipPolygon ship =
+    List.map (rotateVector ship.heading >> V.add ship.position) shipMesh
 
 
 
@@ -424,8 +473,19 @@ shipTick dt ship =
                 |> shipExplodeTick dt elapsedTime
 
 
-projectileTick : Time -> Projectile -> ( Projectile, List Effect )
-projectileTick dt projectile =
+-- I resent the need for this helper
+-- TODO: find a better way
+isActive ship =
+    case ship.status of
+        Active _ ->
+            True
+
+        _ ->
+            False
+
+
+projectileTick : Model -> Time -> Projectile -> ( Projectile, List Effect )
+projectileTick model dt projectile =
     let
         newPosition =
             V.add projectile.position <| V.scale (projectileSpeed * dt) (angleToVector projectile.heading)
@@ -433,11 +493,17 @@ projectileTick dt projectile =
         newProjectile =
             { projectile | position = newPosition }
 
-        collisionEffets =
-            if collisionSegmentVsPolygon ( newPosition, projectile.position ) thePoly then
-                Debug.log "collision!" [ RemoveProjectile newProjectile ]
+        collisionWithShip ship =
+            collisionSegmentVsPolygon ( newPosition, projectile.position ) (shipPolygon ship)
+
+        collideWithShip id ship effects =
+            if ship.controllerId /= projectile.ownerControllerId && isActive ship && collisionWithShip ship then
+                RemoveProjectile newProjectile :: DamageShip ship.controllerId :: effects
             else
-                []
+                effects
+
+        collisionEffets =
+            Dict.foldl collideWithShip [] model.shipsById
 
         boundaryEffects =
             if V.length newPosition > worldRadius then
@@ -456,6 +522,14 @@ applyEffect effect model =
 
         RemoveProjectile projectile ->
             { model | projectiles = List.Extra.remove projectile model.projectiles }
+
+        DamageShip controllerId ->
+            case Dict.get controllerId model.shipsById of
+                Just ship ->
+                    updateShip { ship | status = Exploding 0 } model
+
+                Nothing ->
+                    model
 
         RemoveShip controllerId ->
             { model | shipsById = Dict.remove controllerId model.shipsById }
@@ -477,7 +551,7 @@ tick dt oldModel =
         projectileFolder oldProj ( projs, effects ) =
             let
                 ( newProjectile, newEffects ) =
-                    projectileTick dt oldProj
+                    projectileTick oldModel dt oldProj
             in
                 ( newProjectile :: projs, newEffects ++ effects )
 
