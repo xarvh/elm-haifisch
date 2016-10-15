@@ -215,15 +215,6 @@ collisionSegmentVsPolygon ( a, b ) p =
     collisionPolygonVsPolygon [ a, b ] p
 
 
-thePoly =
-    List.map (V.scale <| 0.1 * worldRadius)
-        [ vector -1 -1
-        , vector -1 1
-        , vector 1 1
-        , vector 1 -1
-        ]
-
-
 
 -- Game Effects
 

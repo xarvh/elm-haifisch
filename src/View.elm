@@ -85,10 +85,7 @@ splash hasControllers =
 background =
     let
         ( fill, stroke, strokeWidth ) =
-            if True then
-                ( "#000030", "#000075", "3px" )
-            else
-                ( "#000030", "black", "10px" )
+                ( "#ffffff", "#f7f7f7", "4px" )
     in
         S.svg
             [ SA.class "ui-background full-window"
@@ -131,8 +128,8 @@ star =
         [ SA.cx "0"
         , SA.cy "0"
         , SA.r "0.02"
-        , SA.fill "#007"
-        , SA.stroke "#00f"
+        , SA.fill "#666"
+        , SA.stroke "#ddd"
         , SA.strokeWidth "0.002"
         ]
         []
@@ -147,7 +144,7 @@ planet orbitRadius =
             , SA.cy "0"
             , SA.r <| toString orbitRadius
             , SA.fill "none"
-            , SA.stroke "#00f"
+            , SA.stroke "#ddd"
             , SA.strokeWidth "0.002"
             ]
             []
@@ -156,8 +153,8 @@ planet orbitRadius =
             [ SA.cx <| toString orbitRadius
             , SA.cy "0"
             , SA.r "0.005"
-            , SA.fill "#070"
-            , SA.stroke "#0f0"
+            , SA.fill "#777"
+            , SA.stroke "#ddd"
             , SA.strokeWidth "0.002"
             ]
             []
@@ -167,7 +164,7 @@ planet orbitRadius =
             , SA.cy "0"
             , SA.r "0.03"
             , SA.fill "none"
-            , SA.stroke "#0f0"
+            , SA.stroke "#ddd"
             , SA.strokeWidth "0.003"
             ]
             []
@@ -180,7 +177,7 @@ outerWellMarker =
         , SA.cy "0"
         , SA.r <| toString worldRadius
         , SA.fill "none"
-        , SA.stroke "#007"
+        , SA.stroke "#aaa"
         , SA.strokeWidth "0.006"
         ]
         []
@@ -192,27 +189,35 @@ outerWellMarker =
 
 ship : Int -> Ship -> Svg Never
 ship colorOffset ship =
-    let
-        ( bright, dark ) =
-            playerColor colorOffset ship.controllerId
+    case ship.status of
+        Game.Active activeModel ->
+            let
+                ( bright, dark ) =
+                    playerColor colorOffset ship.controllerId
 
-        vertices =
-            Game.shipTransform ship Game.shipMesh
-                |> List.map vectorToString
+                vertices =
+                    Game.shipTransform ship Game.shipMesh
+                        |> List.map vectorToString
 
-        path =
-            "M " ++ (String.join " L " vertices) ++ " Z"
-    in
-        S.path
-            [ SA.d path
-            , SA.style <|
-                String.join "; " <|
-                    [ "fill: " ++ dark
-                    , "stroke: " ++ bright
-                    , "stroke-width: " ++ toString shipStrokWidth
+                path =
+                    "M " ++ (String.join " L " vertices) ++ " Z"
+            in
+                S.path
+                    [ SA.d path
+                    , SA.style <|
+                        String.join "; " <|
+                            [ "fill: " ++ dark
+                            , "stroke: " ++ bright
+                            , "stroke-width: " ++ toString shipStrokWidth
+                            ]
                     ]
-            ]
-            []
+                    []
+
+        Game.Spawning elapsedTime ->
+            S.g [] []
+
+        Game.Exploding elapsedTime ->
+            S.g [] []
 
 
 
@@ -313,28 +318,6 @@ projectileView colorOffset p =
 -}
 
 
-thePoly =
-    case Game.thePoly of
-        x :: xs ->
-            S.path
-                [ SA.d <|
-                    "M "
-                        ++ vectorToString x
-                        ++ String.join " " (List.map (\v -> "L " ++ vectorToString v) xs)
-                        ++ " Z"
-                , SA.style <|
-                    String.join "; " <|
-                        [ "stroke: #fff"
-                        , "stroke-width: 0.002"
-                        , "fill: none"
-                        ]
-                ]
-                []
-
-        _ ->
-            S.g [] []
-
-
 
 ---
 
@@ -356,7 +339,6 @@ view worldSize model =
         [ star
         , planet (worldRadius / 3)
         , outerWellMarker
-        , thePoly
         ]
             ++ (List.map (ship model.colorOffset) (Dict.values model.shipsById))
             ++ (List.map (projectileView model.colorOffset) model.projectiles)
