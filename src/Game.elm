@@ -72,6 +72,9 @@ shipMesh =
         , ( -5, -5 )
         ]
 
+shipConvexMesh =
+    List.drop 1 shipMesh
+
 
 
 -- Linear Algebra helpers
@@ -267,9 +270,9 @@ type alias Projectile =
     }
 
 
-shipPolygon : Ship -> Polygon
-shipPolygon ship =
-    List.map (rotateVector ship.heading >> V.add ship.position) shipMesh
+shipTransform : Ship -> Polygon -> Polygon
+shipTransform ship polygon =
+    List.map (rotateVector ship.heading >> V.add ship.position) polygon
 
 
 
@@ -494,7 +497,7 @@ projectileTick model dt projectile =
             { projectile | position = newPosition }
 
         collisionWithShip ship =
-            collisionSegmentVsPolygon ( newPosition, projectile.position ) (shipPolygon ship)
+            collisionSegmentVsPolygon ( newPosition, projectile.position ) (shipTransform ship shipConvexMesh)
 
         collideWithShip id ship effects =
             if ship.controllerId /= projectile.ownerControllerId && isActive ship && collisionWithShip ship then

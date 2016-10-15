@@ -197,7 +197,7 @@ ship colorOffset ship =
             playerColor colorOffset ship.controllerId
 
         vertices =
-            Game.shipPolygon ship
+            Game.shipTransform ship Game.shipMesh
                 |> List.map vectorToString
 
         path =
