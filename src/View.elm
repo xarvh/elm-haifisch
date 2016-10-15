@@ -9,6 +9,7 @@ import Random
 import String
 import Svg as S exposing (Svg)
 import Svg.Attributes as SA
+import Time
 import Math.Vector2 as V
 import Window
 
@@ -185,42 +186,55 @@ outerWellMarker =
 
 
 -- SHIPS
+shipMesh : Float -> Int -> Ship -> Svg Never
+shipMesh opacity colorOffset ship =
+    let
+        ( bright, dark ) =
+            playerColor colorOffset ship.controllerId
 
+        vertices =
+            Game.shipTransform ship Game.shipMesh
+                |> List.map vectorToString
+
+        path =
+            "M " ++ (String.join " L " vertices) ++ " Z"
+    in
+        S.path
+            [ SA.d path
+            , SA.style <|
+                String.join "; " <|
+                    [ "fill: " ++ dark
+                    , "stroke: " ++ bright
+                    , "stroke-width: " ++ toString shipStrokWidth
+                    , "opacity: " ++ toString opacity
+                    ]
+            ]
+            []
 
 ship : Int -> Ship -> Svg Never
 ship colorOffset ship =
     case ship.status of
         Game.Active activeModel ->
-            let
-                ( bright, dark ) =
-                    playerColor colorOffset ship.controllerId
-
-                vertices =
-                    Game.shipTransform ship Game.shipMesh
-                        |> List.map vectorToString
-
-                path =
-                    "M " ++ (String.join " L " vertices) ++ " Z"
-            in
-                S.path
-                    [ SA.d path
-                    , SA.style <|
-                        String.join "; " <|
-                            [ "fill: " ++ dark
-                            , "stroke: " ++ bright
-                            , "stroke-width: " ++ toString shipStrokWidth
-                            ]
-                    ]
-                    []
+            shipMesh 1 colorOffset ship
 
         Game.Spawning elapsedTime ->
             let
-                t =
-                    elapsedTime / Game.explosionDuration
+                blinkPeriod =
+                    0.250 * Time.second
+
+                phase =
+                    elapsedTime / blinkPeriod
+
+                normalPhase =
+                    phase - (toFloat <| floor phase)
+
+                angularPhase =
+                    normalPhase * turns 1
+
+                opacity =
+                    (1 + sin angularPhase) / 2
             in
-                S.g
-                    []
-                    []
+                shipMesh opacity colorOffset ship
 
 
         Game.Exploding elapsedTime ->
@@ -230,7 +244,7 @@ ship colorOffset ship =
 
                 -- particle count
                 n =
-                    10
+                    5
 
                 -- max explosion size
                 r =
@@ -248,11 +262,11 @@ ship colorOffset ship =
                         S.circle
                             [ SA.cx <| toString x
                             , SA.cy <| toString y
-                            , SA.r <| toString <| 0.05 * worldRadius
-                            , SA.opacity <| toString <| (1 - t) / 5
+                            , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
+                            , SA.opacity <| toString <| (1 - t) / 3
                             , SA.fill dark
                             , SA.stroke bright
-                            , SA.strokeWidth "0.1"
+                            , SA.strokeWidth <| toString <| shipStrokWidth * 2
                             ]
                             []
 

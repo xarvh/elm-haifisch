@@ -18,11 +18,11 @@ worldRadius =
 
 
 explosionDuration =
-    10000 * Time.millisecond
+    1000 * Time.millisecond
 
 
 spawnDuration =
-    0 * Time.second
+    3 * Time.second
 
 
 shipSpeed =
