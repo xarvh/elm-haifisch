@@ -18,7 +18,7 @@ worldRadius =
 
 
 explosionDuration =
-    1000 * Time.millisecond
+    10000 * Time.millisecond
 
 
 spawnDuration =

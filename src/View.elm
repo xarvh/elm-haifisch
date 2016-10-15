@@ -214,10 +214,53 @@ ship colorOffset ship =
                     []
 
         Game.Spawning elapsedTime ->
-            S.g [] []
+            let
+                t =
+                    elapsedTime / Game.explosionDuration
+            in
+                S.g
+                    []
+                    []
+
 
         Game.Exploding elapsedTime ->
-            S.g [] []
+            let
+                t =
+                    elapsedTime / Game.explosionDuration
+
+                -- particle count
+                n =
+                    10
+
+                -- max explosion size
+                r =
+                    0.1 * worldRadius
+
+                ( bright, dark ) =
+                    playerColor colorOffset ship.controllerId
+
+                particleByIndex index =
+                    let
+                        a = turns (index / n)
+                        x = t * r * cos a
+                        y = t * r * sin a
+                    in
+                        S.circle
+                            [ SA.cx <| toString x
+                            , SA.cy <| toString y
+                            , SA.r <| toString <| 0.05 * worldRadius
+                            , SA.opacity <| toString <| (1 - t) / 5
+                            , SA.fill dark
+                            , SA.stroke bright
+                            , SA.strokeWidth "0.1"
+                            ]
+                            []
+
+            in
+                S.g
+                    [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
+                    ]
+                    (List.map particleByIndex [0 .. n - 1])
 
 
 
