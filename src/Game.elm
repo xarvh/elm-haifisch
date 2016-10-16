@@ -72,6 +72,7 @@ shipMesh =
         , ( -5, -5 )
         ]
 
+
 shipConvexMesh =
     List.drop 1 shipMesh
 
@@ -467,8 +468,11 @@ shipTick dt ship =
                 |> shipExplodeTick dt elapsedTime
 
 
+
 -- I resent the need for this helper
 -- TODO: find a better way
+
+
 isActive ship =
     case ship.status of
         Active _ ->
@@ -529,7 +533,23 @@ applyEffect effect model =
             { model | shipsById = Dict.remove controllerId model.shipsById }
 
 
-tick : Time -> Model -> Model
+effectToSound : Effect -> String
+effectToSound effect =
+    case effect of
+        SpawnProjectile projectile ->
+            "fire"
+
+        RemoveProjectile projectile ->
+            ""
+
+        DamageShip controllerId ->
+            ""
+
+        RemoveShip controllerId ->
+            ""
+
+
+tick : Time -> Model -> ( Model, List String )
 tick dt oldModel =
     let
         folder id oldShip ( shipsById, effects ) =
@@ -558,10 +578,16 @@ tick dt oldModel =
                 , projectiles = tickedProjectiles
             }
 
+        allEffects =
+            shipEffects ++ projectileEffects
+
+        sounds =
+            List.map effectToSound allEffects
+
         newModel =
-            List.foldl applyEffect tickedModel (shipEffects ++ projectileEffects)
+            List.foldl applyEffect tickedModel allEffects
     in
-        newModel
+        ( newModel, sounds )
 
 
 
@@ -580,14 +606,18 @@ updateShip ship model =
     { model | shipsById = Dict.insert ship.controllerId ship model.shipsById }
 
 
-update : Msg -> Model -> Model
+noSound m =
+    ( m, [] )
+
+
+update : Msg -> Model -> ( Model, List String )
 update msg model =
     case msg of
         AddShip controllerId ->
-            addShip controllerId model
+            noSound <| addShip controllerId model
 
         ControlShip ship ( velocity, heading, isFiring ) ->
-            updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
+            noSound <| updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
 
         KillShip ship ->
             let
@@ -600,7 +630,7 @@ update msg model =
                         _ ->
                             Exploding 0
             in
-                updateShip { ship | status = newStatus } model
+                noSound <| updateShip { ship | status = newStatus } model
 
         Tick dt ->
             tick dt model

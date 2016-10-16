@@ -7,6 +7,7 @@ import Html as H exposing (Html)
 import Html.Attributes as HA
 import Html.App
 import List.Extra
+import Ports
 import Random
 import Task
 import Window
@@ -58,16 +59,16 @@ gamepadToCommand gamepad =
     guessGamepad gamepad
 
 
-gamepadShip ( ship, gamepad ) =
-    Game.update <| Game.ControlShip ship <| guessGamepad gamepad
+gamepadShip ( ship, gamepad ) model =
+    Game.update (Game.ControlShip ship <| guessGamepad gamepad) model |> fst
 
 
-removeShip ship =
-    Game.update (Game.KillShip ship)
+removeShip ship model =
+    Game.update (Game.KillShip ship) model |> fst
 
 
-addShip gamepad =
-    Game.update (Game.AddShip gamepad.index)
+addShip gamepad model =
+    Game.update (Game.AddShip gamepad.index) model |> fst
 
 
 animationFrame : Time -> List Gamepad -> Model -> ( Model, Cmd Msg )
@@ -93,14 +94,17 @@ animationFrame dt gamepads model =
         apply f list oldB =
             List.foldl f oldB list
 
-        newGame =
+        ( newGame, soundNames ) =
             model.game
                 |> apply gamepadShip shipsAndGamepads
                 |> apply removeShip shipsWithoutGamepad
                 |> apply addShip gamepadsWithoutShip
                 |> Game.update (Game.Tick dt)
+
+        soundCmds =
+            List.map Ports.playSound soundNames
     in
-        { model | game = newGame, hasGamepads = gamepads /= [] } ! []
+        { model | game = newGame, hasGamepads = gamepads /= [] } ! soundCmds
 
 
 resizeWindow : Window.Size -> Model -> Model
