@@ -299,7 +299,7 @@ projectileSvg colorOffset p =
         S.circle
             [ SA.cx <| toString <| V.getX p.position
             , SA.cy <| toString <| V.getY p.position
-            , SA.r "0.5"
+            , SA.r "1"
             , SA.fill bright
             , SA.stroke dark
             , SA.strokeWidth "0.1"
