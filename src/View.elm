@@ -11,12 +11,10 @@ import Svg as S exposing (Svg)
 import Svg.Attributes as SA
 import Time
 import Math.Vector2 as V
-import Window
 
 
 -- TODO: this module is a mess, needs some reorganisation
 -- TODO: use Svg.Lazy?
--- TODO make background white with slightly darker hex cells
 
 
 worldRadius =
@@ -383,6 +381,34 @@ projectileView colorOffset p =
                , line midX maxY midX 1
                ]
 -}
+---
+
+
+score index =
+    let
+        ( bright, dark ) =
+            playerColor 0 index
+
+        color c =
+            HA.style [ ( "color", c ) ]
+    in
+        H.li
+            []
+            [ H.p [ HA.class "name", color bright ] [ H.text "The Ship Name" ]
+            , H.p [ HA.class "score", color dark ] [ H.text <| "Kills: " ++ toString 2000 ]
+            ]
+
+
+scoreboard ships =
+    H.div
+        [ HA.class "scoreboard-container" ]
+        [ H.ul
+            [ HA.class "scoreboard" ]
+            (List.map score [0..4])
+        ]
+
+
+
 ---
 
 

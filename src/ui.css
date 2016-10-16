@@ -26,6 +26,33 @@ body {
     margin: 40px 90px;
 }
 
+
+.scoreboard-container {
+    position: absolute;
+}
+
+.scoreboard {
+}
+
+.scoreboard li {
+    list-style: none;
+    border: 2px solid #eee;
+    font-weight: bold;
+    padding: 5px 10px;
+    margin-bottom: 10px;
+}
+
+.scoreboard .name {
+    font-style: italic;
+}
+
+.scoreboard .score {
+}
+
+
+
+
+
 .ui {
     background: black;
 }

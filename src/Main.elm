@@ -175,6 +175,7 @@ view model =
         [ View.background
         , Html.App.map (always Noop) (View.game model.windowSizeInGameCoordinates model.game)
         , View.splash model.hasGamepads
+        , View.scoreboard <| Dict.values model.game.shipsById
         ]
 
 
