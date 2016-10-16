@@ -543,7 +543,7 @@ effectToSound effect =
             ""
 
         DamageShip controllerId ->
-            ""
+            "explosion"
 
         RemoveShip controllerId ->
             ""
