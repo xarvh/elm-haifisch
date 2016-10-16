@@ -1,20 +1,18 @@
-var _xarvh$elm_haifisch$Native_Gamepad = function() {
+function animationFrameAndGamepadsPort(elmApp) {
 
-
-    var Task = _elm_lang$core$Native_Scheduler;
-
-
-    var hasGamepads =
+    var supportsGamepads =
         typeof navigator !== 'undefined' &&
         typeof navigator.getGamepads === 'function';
 
+    var previousTimestamp = performance.now();
 
-    return {
-        animationFrameAndGamepads: Task.nativeBinding(function (callback) {
-            var id = requestAnimationFrame(function (time) {
+    raf();
+
+    function raf() {
+            requestAnimationFrame(function (timestamp) {
 
                 var gpInList =
-                    hasGamepads ? navigator.getGamepads() : [];
+                    supportsGamepads ? navigator.getGamepads() : [];
 
                 var gpOutList =
                     [];
@@ -33,12 +31,11 @@ var _xarvh$elm_haifisch$Native_Gamepad = function() {
                     }
                 }
 
-                callback(Task.succeed({ time: time, gamepads: gpOutList }));
-            });
+                elmApp.ports.animationFrameAndGamepads.send({dt: timestamp - previousTimestamp, gamepads: gpOutList});
 
-            return function() {
-                cancelAnimationFrame(id);
-            };
-        }),
-    };
-}();
+                previousTimestamp = timestamp;
+
+                raf();
+            });
+    }
+}
