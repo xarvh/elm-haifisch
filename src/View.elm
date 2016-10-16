@@ -90,7 +90,7 @@ splash hasControllers =
 background =
     let
         ( fill, stroke, strokeWidth ) =
-                ( "#ffffff", "#f7f7f7", "4px" )
+            ( "#ffffff", "#f7f7f7", "4px" )
     in
         S.svg
             [ SA.class "ui-background full-window"
@@ -190,6 +190,8 @@ outerWellMarker =
 
 
 -- SHIPS
+
+
 shipMesh : Float -> Int -> Ship -> Svg Never
 shipMesh opacity colorOffset ship =
     let
@@ -215,19 +217,20 @@ shipMesh opacity colorOffset ship =
             ]
             []
 
+
 ship : Int -> Ship -> Svg Never
 ship colorOffset ship =
     case ship.status of
-        Game.Active activeModel ->
+        Game.Active ->
             shipMesh 1 colorOffset ship
 
-        Game.Spawning elapsedTime ->
+        Game.Spawning ->
             let
                 blinkPeriod =
-                    0.250 * Time.second
+                    0.25 * Time.second
 
                 phase =
-                    elapsedTime / blinkPeriod
+                    ship.respawnTime / blinkPeriod
 
                 normalPhase =
                     phase - (toFloat <| floor phase)
@@ -240,11 +243,10 @@ ship colorOffset ship =
             in
                 shipMesh opacity colorOffset ship
 
-
-        Game.Exploding elapsedTime ->
+        Game.Exploding ->
             let
                 t =
-                    elapsedTime / Game.explosionDuration
+                    ship.explodeTime / Game.explosionDuration
 
                 -- particle count
                 n =
@@ -259,9 +261,14 @@ ship colorOffset ship =
 
                 particleByIndex index =
                     let
-                        a = turns (index / n)
-                        x = t * r * cos a
-                        y = t * r * sin a
+                        a =
+                            turns (index / n)
+
+                        x =
+                            t * r * cos a
+
+                        y =
+                            t * r * sin a
                     in
                         S.circle
                             [ SA.cx <| toString x
@@ -273,12 +280,11 @@ ship colorOffset ship =
                             , SA.strokeWidth <| toString <| shipStrokWidth * 2
                             ]
                             []
-
             in
                 S.g
                     [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
                     ]
-                    (List.map particleByIndex [0 .. n - 1])
+                    (List.map particleByIndex [0..n - 1])
 
 
 
@@ -377,9 +383,6 @@ projectileView colorOffset p =
                , line midX maxY midX 1
                ]
 -}
-
-
-
 ---
 
 

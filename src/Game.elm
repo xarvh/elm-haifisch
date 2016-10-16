@@ -78,6 +78,46 @@ shipConvexMesh =
 
 
 
+-- state and outcome helpers
+
+
+infixl 0 |>>
+(|>>) : ( a, List c ) -> (a -> ( b, List c )) -> ( b, List c )
+(|>>) ( oldModel, oldEffects ) f =
+    let
+        ( newModel, newEffects ) =
+            f oldModel
+    in
+        ( newModel, oldEffects ++ newEffects )
+
+
+outcomesOverDict : (v -> ( v, List o )) -> Dict comparable v -> ( Dict comparable v, List o )
+outcomesOverDict f dict =
+    let
+        folder key oldValue ( dict, oldOutcomes ) =
+            let
+                ( newValue, newOutcomes ) =
+                    f oldValue
+            in
+                ( Dict.insert key newValue dict, oldOutcomes ++ newOutcomes )
+    in
+        Dict.foldl folder ( Dict.empty, [] ) dict
+
+
+outcomesOverList : (v -> ( v, List o )) -> List v -> ( List v, List o )
+outcomesOverList f oldList =
+    let
+        folder oldValue ( list, oldOutcomes ) =
+            let
+                ( newValue, newOutcomes ) =
+                    f oldValue
+            in
+                ( newValue :: list, oldOutcomes ++ newOutcomes )
+    in
+        List.foldl folder ( [], [] ) oldList
+
+
+
 -- Linear Algebra helpers
 
 
@@ -132,6 +172,18 @@ normalizeAngle a =
         a - 2 * pi
     else
         a
+
+
+
+-- TODO: this normalizes only to within [-pi, +pi], rather than [-pi/2, +pi/2]
+--
+-- normalizeAngle : Float -> Float
+-- normalizeAngle a =
+--     let
+--         turnsToRemove =
+--             truncate <| a / (turns 1)
+--     in
+--         a - (turnsToRemove * turns 1)
 
 
 rightHandNormal : Vector -> Vector
@@ -217,30 +269,42 @@ collisionSegmentVsPolygon ( a, b ) p =
 
 
 
--- Game Effects
+-- Deltas describe generic changes in the game model
 
 
-type Effect
-    = SpawnProjectile Projectile
-      -- TODO should use an id
+type Delta
+    = AddProjectile Projectile
     | RemoveProjectile Projectile
     | DamageShip Int
     | RemoveShip Int
 
 
 
+-- Events are used to notify the parent update of significant events happening within the game.
+-- For example, play sounds or update score.
+
+
+type Event
+    = ShipExplodes Int
+    | ShipFires Int
+    | ShipAppears Int
+    | ShipActivates Int
+    | ShipDamagesShip Int Int
+
+
+type Outcome
+    = D Delta
+    | E Event
+
+
+
 -- Ships
 
 
-type alias ActiveModel =
-    { gunCooldown : Time
-    }
-
-
 type Status
-    = Spawning Time
-    | Active ActiveModel
-    | Exploding Time
+    = Spawning
+    | Active
+    | Exploding
 
 
 type alias Ship =
@@ -252,6 +316,9 @@ type alias Ship =
     , heading : Float
     , status : Status
     , name : String
+    , reloadTime : Time
+    , explodeTime : Time
+    , respawnTime : Time
     }
 
 
@@ -306,22 +373,26 @@ newProjectile ship =
     }
 
 
-shipFireControl : Time -> ActiveModel -> Ship -> ( Ship, List Effect )
-shipFireControl dt { gunCooldown } ship =
+shipFireControl : Time -> Ship -> ( Ship, List Outcome )
+shipFireControl dt ship =
     let
-        ( cooldown, effects ) =
-            if ship.fireControl && gunCooldown == 0 then
-                ( fireReloadTime, [ SpawnProjectile (newProjectile ship) ] )
+        ( newReloadTime, deltas ) =
+            if ship.fireControl && ship.reloadTime == 0 then
+                ( fireReloadTime
+                , [ D <| AddProjectile (newProjectile ship)
+                  , E <| (ShipFires ship.controllerId)
+                  ]
+                )
             else
-                ( max 0 (gunCooldown - dt), [] )
+                ( max 0 (ship.reloadTime - dt), [] )
 
-        newStatus =
-            Active { gunCooldown = cooldown }
+        newShip =
+            { ship | reloadTime = newReloadTime }
     in
-        ( { ship | status = newStatus }, effects )
+        ( newShip, deltas )
 
 
-shipMovementControl : Time -> Ship -> Ship
+shipMovementControl : Time -> Ship -> ( Ship, List Outcome )
 shipMovementControl dt ship =
     let
         ignoreVelocityControl =
@@ -364,15 +435,11 @@ shipMovementControl dt ship =
         newHeading =
             normalizeAngle <| ship.heading + clampedDeltaAngle
     in
-        { ship | position = newPosition, heading = newHeading }
+        ( { ship | position = newPosition, heading = newHeading }, [] )
 
 
-randomPosition : Random.Generator Vector
-randomPosition =
-    Random.map2
-        (\r a -> vector (r * sin a) (r * cos a))
-        (Random.float 0 worldRadius)
-        (Random.float 0 (turns 1))
+
+-- Ship factories
 
 
 makeShip controllerId position name =
@@ -383,8 +450,19 @@ makeShip controllerId position name =
     , heading = vectorToAngle <| V.negate position
     , position = position
     , name = name
-    , status = Spawning 0
+    , status = Spawning
+    , reloadTime = 0
+    , respawnTime = 0
+    , explodeTime = 0
     }
+
+
+randomPosition : Random.Generator Vector
+randomPosition =
+    Random.map2
+        (\r a -> vector (r * sin a) (r * cos a))
+        (Random.float 0 worldRadius)
+        (Random.float 0 (turns 1))
 
 
 randomShip : Int -> Random.Generator Ship
@@ -411,111 +489,101 @@ addShip controllerId model =
 -- Tick
 
 
-noEffect ship =
-    ( ship, [] )
-
-
-shipSpawnTick : Time -> Time -> Ship -> Ship
-shipSpawnTick dt oldElapsedTime ship =
+shipSpawnTick : Time -> Ship -> ( Ship, List Outcome )
+shipSpawnTick dt oldShip =
     let
-        newElapsedTime =
-            oldElapsedTime + dt
-
-        newStatus =
-            if newElapsedTime > spawnDuration then
-                Active { gunCooldown = 0 }
-            else
-                Spawning newElapsedTime
+        newRespawnTime =
+            oldShip.respawnTime + dt
     in
-        { ship | status = newStatus }
+        if newRespawnTime > spawnDuration then
+            ( { oldShip
+                | status = Active
+                , reloadTime = 0
+              }
+            , [ E <| ShipActivates oldShip.controllerId
+              ]
+            )
+        else
+            ( { oldShip
+                | respawnTime = newRespawnTime
+              }
+            , []
+            )
 
 
-shipExplodeTick : Time -> Time -> Ship -> ( Ship, List Effect )
-shipExplodeTick dt oldElapsedTime ship =
+shipExplodeTick : Time -> Ship -> ( Ship, List Outcome )
+shipExplodeTick dt oldShip =
     let
-        newElapsedTime =
-            oldElapsedTime + dt
-
-        newStatus =
-            Exploding <| min explosionDuration newElapsedTime
-
-        effects =
-            if newElapsedTime >= explosionDuration then
-                [ RemoveShip ship.controllerId ]
-            else
-                []
+        newExplodeTime =
+            oldShip.explodeTime + dt
     in
-        ( { ship | status = newStatus }, effects )
+        if newExplodeTime >= explosionDuration then
+            ( oldShip
+            , [ D <| RemoveShip oldShip.controllerId ]
+            )
+        else
+            ( { oldShip | explodeTime = min explosionDuration newExplodeTime }
+            , []
+            )
 
 
-shipTick : Time -> Ship -> ( Ship, List Effect )
+shipTick : Time -> Ship -> ( Ship, List Outcome )
 shipTick dt ship =
     case ship.status of
-        -- TODO: allow the ship to move during spawn
-        Spawning oldElapsedTime ->
+        Spawning ->
             ship
                 |> shipMovementControl dt
-                |> shipSpawnTick dt oldElapsedTime
-                |> noEffect
+                |>> shipSpawnTick dt
 
-        Active activeModel ->
+        Active ->
             ship
                 |> shipMovementControl dt
-                |> shipFireControl dt activeModel
+                |>> shipFireControl dt
 
-        Exploding elapsedTime ->
+        Exploding ->
             ship
-                |> shipExplodeTick dt elapsedTime
+                |> shipExplodeTick dt
 
 
-
--- I resent the need for this helper
--- TODO: find a better way
-
-
-isActive ship =
-    case ship.status of
-        Active _ ->
-            True
-
-        _ ->
-            False
-
-
-projectileTick : Model -> Time -> Projectile -> ( Projectile, List Effect )
-projectileTick model dt projectile =
+projectileTick : Model -> Time -> Projectile -> ( Projectile, List Outcome )
+projectileTick model dt oldProjectile =
     let
         newPosition =
-            V.add projectile.position <| V.scale (projectileSpeed * dt) (angleToVector projectile.heading)
+            V.add oldProjectile.position <| V.scale (projectileSpeed * dt) (angleToVector oldProjectile.heading)
 
         newProjectile =
-            { projectile | position = newPosition }
+            { oldProjectile | position = newPosition }
 
         collisionWithShip ship =
-            collisionSegmentVsPolygon ( newPosition, projectile.position ) (shipTransform ship shipConvexMesh)
+            collisionSegmentVsPolygon ( oldProjectile.position, newProjectile.position ) (shipTransform ship shipConvexMesh)
 
-        collideWithShip id ship effects =
-            if ship.controllerId /= projectile.ownerControllerId && isActive ship && collisionWithShip ship then
-                RemoveProjectile newProjectile :: DamageShip ship.controllerId :: effects
+        collideWithShip id ship deltas =
+            if ship.controllerId /= oldProjectile.ownerControllerId && ship.status == Active && collisionWithShip ship then
+                [ D <| RemoveProjectile newProjectile
+                , D <| DamageShip ship.controllerId
+                , E <| ShipExplodes ship.controllerId
+                , E <| ShipDamagesShip oldProjectile.ownerControllerId ship.controllerId
+                ]
+                    ++ deltas
             else
-                effects
+                deltas
 
         collisionEffets =
             Dict.foldl collideWithShip [] model.shipsById
 
         boundaryEffects =
             if V.length newPosition > worldRadius then
-                [ RemoveProjectile newProjectile ]
+                [ D <| RemoveProjectile newProjectile ]
             else
                 []
     in
         ( newProjectile, collisionEffets ++ boundaryEffects )
 
 
-applyEffect : Effect -> Model -> Model
-applyEffect effect model =
+applyDelta : Delta -> Model -> Model
+applyDelta effect model =
     case effect of
-        SpawnProjectile projectile ->
+        AddProjectile projectile ->
             { model | projectiles = projectile :: model.projectiles }
 
         RemoveProjectile projectile ->
@@ -524,7 +592,7 @@ applyEffect effect model =
         DamageShip controllerId ->
             case Dict.get controllerId model.shipsById of
                 Just ship ->
-                    updateShip { ship | status = Exploding 0 } model
+                    updateShip { ship | status = Exploding } model
 
                 Nothing ->
                     model
@@ -533,44 +601,24 @@ applyEffect effect model =
             { model | shipsById = Dict.remove controllerId model.shipsById }
 
 
-effectToSound : Effect -> String
-effectToSound effect =
-    case effect of
-        SpawnProjectile projectile ->
-            "fire"
-
-        RemoveProjectile projectile ->
-            ""
-
-        DamageShip controllerId ->
-            "explosion"
-
-        RemoveShip controllerId ->
-            ""
+splitOutcomes outcomes =
+    let
+        folder outcome ( deltas, events ) =
+            case outcome of
+                D delta -> ( delta :: deltas, events )
+                E event -> ( deltas, event :: events )
+    in
+        List.foldl folder ( [], []) outcomes
 
 
-tick : Time -> Model -> ( Model, List String )
+tick : Time -> Model -> ( Model, List Event )
 tick dt oldModel =
     let
-        folder id oldShip ( shipsById, effects ) =
-            let
-                ( newShip, newEffects ) =
-                    shipTick dt oldShip
-            in
-                ( Dict.insert id newShip shipsById, newEffects ++ effects )
+        ( tickedShipsById, shipOutcomes ) =
+            outcomesOverDict (shipTick dt) oldModel.shipsById
 
-        ( tickedShipsById, shipEffects ) =
-            Dict.foldl folder ( Dict.empty, [] ) oldModel.shipsById
-
-        projectileFolder oldProj ( projs, effects ) =
-            let
-                ( newProjectile, newEffects ) =
-                    projectileTick oldModel dt oldProj
-            in
-                ( newProjectile :: projs, newEffects ++ effects )
-
-        ( tickedProjectiles, projectileEffects ) =
-            List.foldl projectileFolder ( [], [] ) oldModel.projectiles
+        ( tickedProjectiles, projectileOutcomes ) =
+            outcomesOverList (projectileTick oldModel dt) oldModel.projectiles
 
         tickedModel =
             { oldModel
@@ -578,16 +626,13 @@ tick dt oldModel =
                 , projectiles = tickedProjectiles
             }
 
-        allEffects =
-            shipEffects ++ projectileEffects
-
-        sounds =
-            List.map effectToSound allEffects
+        ( deltas, events ) =
+            splitOutcomes <| shipOutcomes ++ projectileOutcomes
 
         newModel =
-            List.foldl applyEffect tickedModel allEffects
+            List.foldl applyDelta tickedModel deltas
     in
-        ( newModel, sounds )
+        ( newModel, events )
 
 
 
@@ -606,31 +651,21 @@ updateShip ship model =
     { model | shipsById = Dict.insert ship.controllerId ship model.shipsById }
 
 
-noSound m =
+noEvents m =
     ( m, [] )
 
 
-update : Msg -> Model -> ( Model, List String )
+update : Msg -> Model -> ( Model, List Event )
 update msg model =
     case msg of
         AddShip controllerId ->
-            noSound <| addShip controllerId model
+            noEvents <| addShip controllerId model
 
         ControlShip ship ( velocity, heading, isFiring ) ->
-            noSound <| updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
+            noEvents <| updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
 
         KillShip ship ->
-            let
-                -- TODO is there a better do this pattern matching?
-                newStatus =
-                    case ship.status of
-                        Exploding elapsedTime ->
-                            ship.status
-
-                        _ ->
-                            Exploding 0
-            in
-                noSound <| updateShip { ship | status = newStatus } model
+            noEvents <| updateShip { ship | status = Exploding } model
 
         Tick dt ->
             tick dt model

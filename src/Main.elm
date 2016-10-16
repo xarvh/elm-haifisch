@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Dict
 import Gamepad exposing (Gamepad)
-import Game exposing (vector)
+import Game exposing (vector, (|>>))
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Html.App
@@ -94,15 +94,23 @@ animationFrame dt gamepads model =
         apply f list oldB =
             List.foldl f oldB list
 
-        ( newGame, soundNames ) =
+        ( newGame, events ) =
             model.game
                 |> apply gamepadShip shipsAndGamepads
                 |> apply removeShip shipsWithoutGamepad
                 |> apply addShip gamepadsWithoutShip
                 |> Game.update (Game.Tick dt)
 
+        mapSound event =
+            case event of
+                Game.ShipExplodes id -> Just <| Ports.playSound "explosion"
+                Game.ShipFires id -> Just <| Ports.playSound "fire"
+                Game.ShipAppears id -> Nothing
+                Game.ShipActivates id -> Just <| Ports.playSound "spawnEnd"
+                Game.ShipDamagesShip attackerId victimId -> Nothing
+
         soundCmds =
-            List.map Ports.playSound soundNames
+            List.filterMap mapSound events
     in
         { model | game = newGame, hasGamepads = gamepads /= [] } ! soundCmds
 
