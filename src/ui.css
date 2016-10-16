@@ -5,9 +5,25 @@ body {
 }
 
 
-.splash {
+.splash-container {
     position: absolute;
-    color: #0f0;
+}
+
+.splash {
+    position: relative;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    border: 2px solid #eee;
+    background-color: rgba(255, 255, 255, 0.3);
+    width: 400px;
+    color: #ff8d00;
+    text-align: center;
+}
+
+.splash p {
+    margin: 40px 90px;
 }
 
 .ui {
@@ -29,44 +45,6 @@ body {
 .star-system-container {
 }
 
-
-.selection-fleets-list {
-    position: absolute;
-    bottom: 0.5%;
-    left: 0.5%;
-    width: 30%;
-}
-
-
-.selection-fleet {
-    background-color: rgba(0, 0, 100, 0.8);
-    margin: 0.5vh;
-}
-
-.selection-fleet .fleet-header {
-    background-color: #008;
-    color: #0f0;
-    display: flex;
-    justify-content: space-between;
-}
-.fleet-header .fleet-name {
-    margin: 0.5vh;
-}
-
-
-.selection-ships-list {
-}
-
-
-.selection-ship {
-    display: flex;
-    align-items: center;
-}
-
-.selection-ship .ship-name {
-    color: #0f0;
-    margin-left: 0.5vh;
-}
 
 
 .info-box {

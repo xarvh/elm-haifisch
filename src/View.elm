@@ -70,12 +70,16 @@ splash hasControllers =
         H.text ""
     else
         H.div
-            [ HA.class "splash" ]
-            [ H.h1
-                []
-                [ H.text "Haifisch" ]
-            , H.text
-                "No gamepads detected, you need at least TWO to play."
+            [ HA.class "splash-container full-window" ]
+            [ H.div
+                [ HA.class "splash" ]
+                [ H.h1
+                    []
+                    [ H.text "Haifisch" ]
+                , H.p
+                    []
+                    [ H.text "No gamepads detected, you need at least TWO to play." ]
+                ]
             ]
 
 
