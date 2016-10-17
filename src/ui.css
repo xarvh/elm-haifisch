@@ -5,6 +5,32 @@ body {
 }
 
 
+
+
+
+.haifisch .flex-container {
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.haifisch .flex-container .flex-contained {
+    width: 100%;
+    height: 100%;
+}
+
+
+
+
+
+
+
+
+
 .splash-container {
     position: absolute;
 }
@@ -55,33 +81,3 @@ body {
     margin-bottom: 0;
 }
 
-
-
-
-
-.ui {
-    background: black;
-}
-
-.full-window {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    position: absolute;
-}
-
-
-.ui-background {
-}
-
-
-.star-system-container {
-}
-
-
-
-.info-box {
-    position: absolute;
-    color: white;
-    right: 2vh;
-}
