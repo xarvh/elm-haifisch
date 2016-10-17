@@ -1,7 +1,7 @@
 module View exposing (..)
 
-import Array
-import Dict
+import Array exposing (Array)
+import Dict exposing (Dict)
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Game exposing (Ship, Projectile, Vector, vectorToString)
@@ -11,12 +11,10 @@ import Svg as S exposing (Svg)
 import Svg.Attributes as SA
 import Time
 import Math.Vector2 as V
-import Window
 
 
 -- TODO: this module is a mess, needs some reorganisation
 -- TODO: use Svg.Lazy?
--- TODO make background white with slightly darker hex cells
 
 
 worldRadius =
@@ -32,33 +30,30 @@ shipStrokWidth =
 
 
 
--- Player colors
+-- Player coloration
 
 
-playerColorsArray =
+type alias Coloration =
+    ( String, String )
+
+
+colorations : Array Coloration
+colorations =
     Array.fromList
         -- bright, dark
         [ ( "#f00", "#900" )
         , ( "#0f0", "#090" )
         , ( "#00f", "#009" )
-        , ( "#0ff", "#099" )
+        , ( "#0ee", "#0bb" )
         , ( "#f0f", "#909" )
-        , ( "#ff0", "#990" )
+        , ( "#ee0", "#bb0" )
         ]
 
 
-playerColor : Int -> Int -> ( String, String )
-playerColor colorOffset controllerId =
-    let
-        -- It seems like colorOffset is always divisible by 2 -_-
-        off =
-            floor <| (toFloat colorOffset / toFloat Random.maxInt) * (toFloat <| Array.length playerColorsArray)
-
-        index =
-            (off + controllerId) % Array.length playerColorsArray
-    in
-        Array.get index playerColorsArray
-            |> Maybe.withDefault ( "", "" )
+getColoration playersById id =
+    Dict.get id playersById
+        |> Maybe.map .coloration
+        |> Maybe.withDefault ( "", "" )
 
 
 
@@ -192,12 +187,9 @@ outerWellMarker =
 -- SHIPS
 
 
-shipMesh : Float -> Int -> Ship -> Svg Never
-shipMesh opacity colorOffset ship =
+-- shipMesh : Float -> Int -> Ship -> Svg a
+shipMesh opacity (bright, dark) ship =
     let
-        ( bright, dark ) =
-            playerColor colorOffset ship.controllerId
-
         vertices =
             Game.shipTransform ship Game.shipMesh
                 |> List.map vectorToString
@@ -218,83 +210,87 @@ shipMesh opacity colorOffset ship =
             []
 
 
-ship : Int -> Ship -> Svg Never
-ship colorOffset ship =
-    case ship.status of
-        Game.Active ->
-            shipMesh 1 colorOffset ship
+-- ship : Int -> Ship -> Svg a
+ship playersById ship =
+    let
+        coloration =
+            getColoration playersById ship.controllerId
+    in
+        case ship.status of
+            Game.Active ->
+                shipMesh 1.0 coloration ship
 
-        Game.Spawning ->
-            let
-                blinkPeriod =
-                    0.25 * Time.second
+            Game.Spawning ->
+                let
+                    blinkPeriod =
+                        0.25 * Time.second
 
-                phase =
-                    ship.respawnTime / blinkPeriod
+                    phase =
+                        ship.respawnTime / blinkPeriod
 
-                normalPhase =
-                    phase - (toFloat <| floor phase)
+                    normalPhase =
+                        phase - (toFloat <| floor phase)
 
-                angularPhase =
-                    normalPhase * turns 1
+                    angularPhase =
+                        normalPhase * turns 1
 
-                opacity =
-                    (1 + sin angularPhase) / 2
-            in
-                shipMesh opacity colorOffset ship
+                    opacity =
+                        (1 + sin angularPhase) / 2
+                in
+                    shipMesh opacity coloration ship
 
-        Game.Exploding ->
-            let
-                t =
-                    ship.explodeTime / Game.explosionDuration
+            Game.Exploding ->
+                let
+                    t =
+                        ship.explodeTime / Game.explosionDuration
 
-                -- particle count
-                n =
-                    5
+                    -- particle count
+                    n =
+                        5
 
-                -- max explosion size
-                r =
-                    0.1 * worldRadius
+                    -- max explosion size
+                    r =
+                        0.1 * worldRadius
 
-                ( bright, dark ) =
-                    playerColor colorOffset ship.controllerId
+                    ( bright, dark ) =
+                        coloration
 
-                particleByIndex index =
-                    let
-                        a =
-                            turns (index / n)
+                    particleByIndex index =
+                        let
+                            a =
+                                turns (index / n)
 
-                        x =
-                            t * r * cos a
+                            x =
+                                t * r * cos a
 
-                        y =
-                            t * r * sin a
-                    in
-                        S.circle
-                            [ SA.cx <| toString x
-                            , SA.cy <| toString y
-                            , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
-                            , SA.opacity <| toString <| (1 - t) / 3
-                            , SA.fill dark
-                            , SA.stroke bright
-                            , SA.strokeWidth <| toString <| shipStrokWidth * 2
-                            ]
-                            []
-            in
-                S.g
-                    [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
-                    ]
-                    (List.map particleByIndex [0..n - 1])
+                            y =
+                                t * r * sin a
+                        in
+                            S.circle
+                                [ SA.cx <| toString x
+                                , SA.cy <| toString y
+                                , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
+                                , SA.opacity <| toString <| (1 - t) / 3
+                                , SA.fill dark
+                                , SA.stroke bright
+                                , SA.strokeWidth <| toString <| shipStrokWidth * 2
+                                ]
+                                []
+                in
+                    S.g
+                        [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
+                        ]
+                        (List.map particleByIndex [0..n - 1])
 
 
 
 -- Projectiles
 
 
-projectileSvg colorOffset p =
+projectileSvg playersById p =
     let
         ( bright, dark ) =
-            playerColor colorOffset p.ownerControllerId
+            getColoration playersById p.ownerControllerId
     in
         S.circle
             [ SA.cx <| toString <| V.getX p.position
@@ -307,7 +303,7 @@ projectileSvg colorOffset p =
             []
 
 
-projectileView : Int -> Projectile -> Svg Never
+-- projectileView : Int -> Projectile -> Svg a
 projectileView colorOffset p =
     let
         size =
@@ -386,6 +382,39 @@ projectileView colorOffset p =
 ---
 
 
+score playersById ship =
+    let
+        ( bright, dark ) =
+            getColoration playersById ship.controllerId
+
+        score =
+            case Dict.get ship.controllerId playersById of
+                Just player -> player.score
+                Nothing -> 0
+
+        color c =
+            HA.style [ ( "color", c ) ]
+    in
+        H.li
+            []
+            [ H.p [ HA.class "name", color bright ] [ H.text ship.name ]
+            , H.p [ HA.class "score", color bright ] [ H.text <| toString score ]
+            ]
+
+
+scoreboard playersById shipsById =
+    H.div
+        [ HA.class "scoreboard-container" ]
+        [ H.ul
+            [ HA.class "scoreboard" ]
+            (List.map (score playersById) (Dict.values shipsById))
+        ]
+
+
+
+---
+
+
 viewbox worldSize =
     let
         ( w, h ) =
@@ -394,23 +423,18 @@ viewbox worldSize =
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
-view : Vector -> Game.Model -> Svg Never
-view worldSize model =
-    S.svg
-        [ SA.viewBox (viewbox worldSize)
-        ]
-    <|
-        [ star
-        , planet (worldRadius / 3)
-        , outerWellMarker
-        ]
-            ++ (List.map (ship model.colorOffset) (Dict.values model.shipsById))
-            ++ (List.map (projectileView model.colorOffset) model.projectiles)
-
-
-game : Vector -> Game.Model -> Html Never
-game worldSize model =
+game : Vector -> Dict Int { score : Int, coloration : Coloration } -> Game.Model -> Html a
+game worldSize playersById model =
     H.div
         [ HA.class "star-system-container full-window" ]
-        [ view worldSize model
+        [ S.svg
+            [ SA.viewBox (viewbox worldSize)
+            ]
+          <|
+            [ star
+            , planet (worldRadius / 3)
+            , outerWellMarker
+            ]
+                ++ (List.map (ship playersById) (Dict.values model.shipsById))
+                ++ (List.map (projectileView playersById) model.projectiles)
         ]
