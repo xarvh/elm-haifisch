@@ -341,7 +341,6 @@ shipTransform ship polygon =
 type alias Model =
     { shipsById : Dict Int Ship
     , projectiles : List Projectile
-    , colorOffset : Int
     , seed : Random.Seed
     }
 
@@ -350,16 +349,11 @@ type alias Model =
 -- Init
 
 
-init newDate =
-    let
-        seed =
-            Random.initialSeed newDate
-    in
-        { shipsById = Dict.empty
-        , projectiles = []
-        , colorOffset = fst <| Random.step (Random.int 0 Random.maxInt) seed
-        , seed = seed
-        }
+init seed =
+    { shipsById = Dict.empty
+    , projectiles = []
+    , seed = seed
+    }
 
 
 

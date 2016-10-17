@@ -1,6 +1,7 @@
 module Main exposing (..)
 
-import Dict
+import Array exposing (Array)
+import Dict exposing (Dict)
 import Gamepad exposing (Gamepad)
 import Game exposing (vector, (|>>))
 import Html as H exposing (Html)
@@ -9,6 +10,7 @@ import Html.App
 import List.Extra
 import Ports
 import Random
+import Random.Array
 import Task
 import Window
 import Time exposing (Time)
@@ -23,6 +25,8 @@ type alias Model =
     , hasGamepads : Bool
     , windowSizeInPixels : Window.Size
     , windowSizeInGameCoordinates : Game.Vector
+    , colorations : Array View.Coloration
+    , playersById : Dict Int { score : Int, coloration : View.Coloration }
     }
 
 
@@ -101,18 +105,56 @@ animationFrame dt gamepads model =
                 |> apply addShip gamepadsWithoutShip
                 |> Game.update (Game.Tick dt)
 
-        mapSound event =
-            case event of
-                Game.ShipExplodes id -> Just <| Ports.playSound "explosion"
-                Game.ShipFires id -> Just <| Ports.playSound "fire"
-                Game.ShipAppears id -> Nothing
-                Game.ShipActivates id -> Just <| Ports.playSound "spawnEnd"
-                Game.ShipDamagesShip attackerId victimId -> Nothing
+        makePlayer gamepad =
+            { score = 0
+            , coloration =
+                Array.get (gamepad.index % Array.length model.colorations) model.colorations
+                    |> Maybe.withDefault ( "", "" )
+            }
 
-        soundCmds =
-            List.filterMap mapSound events
+        updatePlayer gamepad playersById =
+            case Dict.get gamepad.index playersById of
+                Nothing ->
+                    Dict.insert gamepad.index (makePlayer gamepad) playersById
+
+                Just player ->
+                    model.playersById
+
+        updatedPlayersById =
+            List.foldl updatePlayer model.playersById gamepadsWithoutShip
+
+        foldEvent event ( cmds, playersById ) =
+            case event of
+                Game.ShipExplodes id ->
+                    ( Ports.playSound "explosion" :: cmds, playersById )
+
+                Game.ShipFires id ->
+                    ( Ports.playSound "fire" :: cmds, playersById )
+
+                Game.ShipAppears id ->
+                    ( cmds, playersById )
+
+                Game.ShipActivates id ->
+                    ( Ports.playSound "spawnEnd" :: cmds, playersById )
+
+                Game.ShipDamagesShip attackerId victimId ->
+                    (,) cmds <|
+                        case Dict.get attackerId playersById of
+                            Nothing ->
+                                playersById
+
+                            Just player ->
+                                Dict.insert attackerId { player | score = player.score + 1 } playersById
+
+        ( soundCmds, scoredPlayersById ) =
+            List.foldl foldEvent ( [], updatedPlayersById ) events
     in
-        { model | game = newGame, hasGamepads = gamepads /= [] } ! soundCmds
+        { model
+            | game = newGame
+            , hasGamepads = gamepads /= []
+            , playersById = scoredPlayersById
+        }
+            ! soundCmds
 
 
 resizeWindow : Window.Size -> Model -> Model
@@ -159,12 +201,18 @@ update msg model =
 
 init : Int -> ( Model, Cmd Msg )
 init dateNow =
-    { game = (Game.init dateNow)
-    , hasGamepads = False
-    , windowSizeInPixels = { width = 800, height = 600 }
-    , windowSizeInGameCoordinates = (Game.vector 4 3)
-    }
-        ! [ Task.perform identity WindowResizes Window.size ]
+    let
+        seed =
+            Random.initialSeed dateNow
+    in
+        { game = Game.init seed
+        , hasGamepads = False
+        , windowSizeInPixels = { width = 800, height = 600 }
+        , windowSizeInGameCoordinates = Game.vector 4 3
+        , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> fst
+        , playersById = Dict.empty
+        }
+            ! [ Task.perform identity WindowResizes Window.size ]
 
 
 view : Model -> Html Msg
@@ -173,9 +221,9 @@ view model =
         [ HA.class "ui"
         ]
         [ View.background
-        , Html.App.map (always Noop) (View.game model.windowSizeInGameCoordinates model.game)
+        , View.game model.windowSizeInGameCoordinates model.playersById model.game
         , View.splash model.hasGamepads
-        , View.scoreboard <| Dict.values model.game.shipsById
+        , View.scoreboard model.playersById model.game.shipsById
         ]
 
 
