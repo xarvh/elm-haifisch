@@ -218,12 +218,12 @@ init dateNow =
 view : Model -> Html Msg
 view model =
     H.div
-        [ HA.class "ui"
+        [ HA.class "haifisch"
         ]
-        [ View.background
-        , View.game model.windowSizeInGameCoordinates model.playersById model.game
-        , View.splash model.hasGamepads
-        , View.scoreboard model.playersById model.game.shipsById
+--         [ View.background
+--         [ View.scoreboard model.playersById model.game.shipsById
+        [ View.game model.windowSizeInGameCoordinates model.playersById model.game
+--         , View.splash model.hasGamepads
         ]
 
 

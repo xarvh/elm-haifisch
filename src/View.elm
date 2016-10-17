@@ -185,10 +185,10 @@ outerWellMarker =
 
 
 -- SHIPS
-
-
 -- shipMesh : Float -> Int -> Ship -> Svg a
-shipMesh opacity (bright, dark) ship =
+
+
+shipMesh opacity ( bright, dark ) ship =
     let
         vertices =
             Game.shipTransform ship Game.shipMesh
@@ -210,7 +210,10 @@ shipMesh opacity (bright, dark) ship =
             []
 
 
+
 -- ship : Int -> Ship -> Svg a
+
+
 ship playersById ship =
     let
         coloration =
@@ -303,7 +306,10 @@ projectileSvg playersById p =
             []
 
 
+
 -- projectileView : Int -> Projectile -> Svg a
+
+
 projectileView colorOffset p =
     let
         size =
@@ -389,8 +395,11 @@ score playersById ship =
 
         score =
             case Dict.get ship.controllerId playersById of
-                Just player -> player.score
-                Nothing -> 0
+                Just player ->
+                    player.score
+
+                Nothing ->
+                    0
 
         color c =
             HA.style [ ( "color", c ) ]
@@ -425,16 +434,14 @@ viewbox worldSize =
 
 game : Vector -> Dict Int { score : Int, coloration : Coloration } -> Game.Model -> Html a
 game worldSize playersById model =
-    H.div
-        [ HA.class "star-system-container full-window" ]
-        [ S.svg
-            [ SA.viewBox (viewbox worldSize)
+    H.div [ HA.class "flex-container" ]
+        [ H.div [ HA.class "flex-contained" ]
+            [ S.svg [ SA.viewBox (viewbox worldSize) ] <|
+                [ star
+                , planet (worldRadius / 3)
+                , outerWellMarker
+                ]
+                    ++ (List.map (ship playersById) (Dict.values model.shipsById))
+                    ++ (List.map (projectileView playersById) model.projectiles)
             ]
-          <|
-            [ star
-            , planet (worldRadius / 3)
-            , outerWellMarker
-            ]
-                ++ (List.map (ship playersById) (Dict.values model.shipsById))
-                ++ (List.map (projectileView playersById) model.projectiles)
         ]
