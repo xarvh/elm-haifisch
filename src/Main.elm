@@ -7,6 +7,7 @@ import Game exposing (vector, (|>>))
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Html.App
+import Html.Events as HE
 import List.Extra
 import Ports
 import Random
@@ -219,6 +220,7 @@ view : Model -> Html Msg
 view model =
     H.div
         [ HA.class "ui"
+        , HE.onClick <| AnimationFrameAndGamepads ( 16.0, [ { index = 999, axes = [], buttons = [] } ] )
         ]
         [ View.background
         , View.game model.windowSizeInGameCoordinates model.playersById model.game
