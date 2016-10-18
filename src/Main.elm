@@ -26,8 +26,8 @@ type alias Model =
     , hasGamepads : Bool
     , windowSizeInPixels : Window.Size
     , windowSizeInGameCoordinates : Vector
-    , colorations : Array View.Coloration
-    , playersById : Dict Int { score : Int, coloration : View.Coloration }
+    , colorations : Array Coloration
+    , playersById : Dict Int Player
     }
 
 
@@ -108,21 +108,33 @@ animationFrame dt gamepads model =
 
         makePlayer gamepad =
             { score = 0
+            , controllerId = gamepad.index
             , coloration =
                 Array.get (gamepad.index % Array.length model.colorations) model.colorations
                     |> Maybe.withDefault ( "", "" )
+            , isConnected = True
             }
 
-        updatePlayer gamepad playersById =
-            case Dict.get gamepad.index playersById of
+        connectPlayer gamepad playersById =
+            let
+                updatedPlayer =
+                    Dict.get gamepad.index playersById
+                        |> Maybe.withDefault (makePlayer gamepad)
+            in
+                Dict.insert gamepad.index { updatedPlayer | isConnected = True } playersById
+
+        disconnectPlayer ship playersById =
+            case Dict.get ship.controllerId playersById of
                 Nothing ->
-                    Dict.insert gamepad.index (makePlayer gamepad) playersById
+                    playersById
 
                 Just player ->
-                    model.playersById
+                    Dict.insert ship.controllerId { player | isConnected = False } playersById
 
         updatedPlayersById =
-            List.foldl updatePlayer model.playersById gamepadsWithoutShip
+            model.playersById
+                |> apply connectPlayer gamepadsWithoutShip
+                |> apply disconnectPlayer shipsWithoutGamepad
 
         foldEvent event ( cmds, playersById ) =
             case event of

@@ -5,6 +5,21 @@ import Time exposing (Time)
 
 
 -- TYPES
+
+
+type alias Coloration =
+    ( String, String )
+
+
+type alias Player =
+    { controllerId : Int
+    , score : Int
+    , coloration : Coloration
+    , isConnected : Bool
+    }
+
+
+
 -- Deltas describe generic changes in the game model
 
 

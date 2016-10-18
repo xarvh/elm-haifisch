@@ -36,10 +36,6 @@ shipStrokWidth =
 -- Player coloration
 
 
-type alias Coloration =
-    ( String, String )
-
-
 colorations : Array Coloration
 colorations =
     Array.fromList
@@ -340,26 +336,26 @@ projectile playersById p =
             ]
 
 
-score playersById ship =
+score shipsById player =
     let
         ( bright, dark ) =
-            getColoration playersById ship.controllerId
+            player.coloration
 
-        score =
-            case Dict.get ship.controllerId playersById of
-                Just player ->
-                    player.score
+        name =
+            case Dict.get player.controllerId shipsById of
+                Just ship ->
+                    ship.name
 
                 Nothing ->
-                    0
+                    "-"
 
         color c =
             HA.style [ ( "color", c ) ]
     in
         H.li
             []
-            [ H.p [ HA.class "name", color bright ] [ H.text ship.name ]
-            , H.p [ HA.class "score", color bright ] [ H.text <| toString score ]
+            [ H.p [ HA.class "name", color bright ] [ H.text name ]
+            , H.p [ HA.class "score", color bright ] [ H.text <| toString player.score ]
             ]
 
 
@@ -368,7 +364,7 @@ scoreboard playersById shipsById =
         [ HA.class "scoreboard-container" ]
         [ H.ul
             [ HA.class "scoreboard" ]
-            (List.map (score playersById) (Dict.values shipsById))
+            (List.map (score shipsById) (Dict.values playersById |> List.filter .isConnected))
         ]
 
 
@@ -380,7 +376,7 @@ viewbox worldSize =
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
-game : Vector -> Dict Int { score : Int, coloration : Coloration } -> Game.Model -> Html a
+game : Vector -> Dict Int Player -> Game.Model -> Html a
 game worldSize playersById model =
     H.div
         [ HA.class "star-system-container full-window" ]
