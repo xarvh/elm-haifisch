@@ -11,7 +11,9 @@ module LexicalRandom
 
 import Array exposing (Array)
 import Dict exposing (Dict)
-import Random
+import Random exposing (Generator)
+import Random.Array
+import Random.Extra
 import String
 import Regex as R
 
@@ -36,23 +38,10 @@ type alias Lexicon =
 -- Random helpers
 
 
-constant : a -> Random.Generator a
-constant value =
-    Random.map (\_ -> value) Random.bool
-
-
-combine : List (Random.Generator a) -> Random.Generator (List a)
-combine =
-    List.foldr (Random.map2 (::)) (constant [])
-
-
-choices : Random.Generator a -> Array (Random.Generator a) -> Random.Generator a
+choices : Generator a -> Array (Generator a) -> Generator a
 choices default array =
-    (Random.int 0 <| Array.length array - 1)
-        `Random.andThen`
-            \index ->
-                Array.get index array
-                    |> Maybe.withDefault default
+    Random.Array.sample array
+        `Random.andThen` (Maybe.withDefault default)
 
 
 {-| Generate a name given a lexicon and a key of that lexicon
@@ -75,12 +64,12 @@ choices default array =
     ( name, seed ) =
         Random.step nameGenerator seed
 -}
-generator : (String -> String) -> Lexicon -> String -> Random.Generator String
+generator : (String -> String) -> Lexicon -> String -> Generator String
 generator filler lexicon key =
     case Dict.get key lexicon of
         Nothing ->
             -- either the key is plain invalid, or it is stuck in a loop
-            constant (filler key)
+            Random.Extra.constant (filler key)
 
         Just definitions ->
             let
@@ -94,15 +83,15 @@ generator filler lexicon key =
                             generator filler reducedLexicon key
 
                         Constant string ->
-                            constant string
+                            Random.Extra.constant string
 
                 definitionToGenerator definition =
                     List.map fragmentToGenerator definition
-                        |> combine
+                        |> Random.Extra.together
                         |> Random.map (String.join "")
             in
                 Array.map definitionToGenerator definitions
-                    |> choices (constant "")
+                    |> choices (Random.Extra.constant "")
 
 
 
