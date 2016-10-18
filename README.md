@@ -32,5 +32,8 @@ Additional Credits
 TODO
 ====
 * Code and Svg optimization
+* Computer-controlled opponents?
+* Actual dynamics with acceleration and inertia rather than just a speed?
+* Make the star and the planet actually do something?
 * Gamepad configuration tool?
 * Multiplayer via websockets + server

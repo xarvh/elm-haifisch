@@ -17,6 +17,7 @@ import Math.Vector2 as V
 
 -- TODO: this module is a mess, needs some reorganisation
 -- TODO: use Svg.Lazy?
+-- TODO: scale most things by worldRadius?
 
 
 worldRadius =
@@ -137,9 +138,9 @@ star =
         []
 
 
-planet orbitRadius =
+planet orbitRadius angle =
     S.g
-        []
+        [ SA.transform <| "rotate(" ++ toString (angle / degrees 1) ++ ")" ]
         -- orbit
         [ S.circle
             [ SA.cx "0"
@@ -154,7 +155,7 @@ planet orbitRadius =
         , S.circle
             [ SA.cx <| toString orbitRadius
             , SA.cy "0"
-            , SA.r "0.005"
+            , SA.r <| toString <| 0.005 * worldRadius
             , SA.fill "#777"
             , SA.stroke "#ddd"
             , SA.strokeWidth <| toString <| 0.002 * worldRadius
@@ -373,7 +374,7 @@ game worldSize playersById model =
             ]
           <|
             [ star
-            , planet (worldRadius / 3)
+            , planet (worldRadius / 3) model.planetAngle
             , outerWellMarker
             ]
                 ++ (List.map (ship playersById) (Dict.values model.shipsById))
