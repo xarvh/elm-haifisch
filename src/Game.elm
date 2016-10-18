@@ -19,8 +19,14 @@ import Random
 worldRadius =
     17 * Ship.length
 
+
 planetAngularVelocity =
     turns 0.05 / Time.second
+
+
+satelliteAngularVelocity =
+    turns 0.09 / Time.second
+
 
 velocityControlThreshold =
     0.1
@@ -82,6 +88,7 @@ type alias Model =
     { shipsById : Dict Int Ship
     , projectiles : List Projectile
     , planetAngle : Float
+    , satelliteAngle : Float
     , seed : Random.Seed
     }
 
@@ -95,6 +102,7 @@ init seed =
     , projectiles = []
     , seed = seed
     , planetAngle = fst <| Random.step (Random.float (turns -0.5) (turns 0.5)) seed
+    , satelliteAngle = 0
     }
 
 
@@ -364,6 +372,7 @@ tick dt oldModel =
                 | shipsById = tickedShipsById
                 , projectiles = tickedProjectiles
                 , planetAngle = normalizeAngle <| oldModel.planetAngle + dt * planetAngularVelocity
+                , satelliteAngle = normalizeAngle <| oldModel.satelliteAngle + dt * satelliteAngularVelocity
             }
 
         ( deltas, events ) =

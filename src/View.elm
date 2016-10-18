@@ -138,9 +138,9 @@ star =
         []
 
 
-planet orbitRadius angle =
+planet orbitRadius planetAngle satelliteAngle =
     S.g
-        [ SA.transform <| "rotate(" ++ toString (angle / degrees 1) ++ ")" ]
+        [ SA.transform <| "rotate(" ++ toString (planetAngle / degrees 1) ++ ")" ]
         -- orbit
         [ S.circle
             [ SA.cx "0"
@@ -152,25 +152,39 @@ planet orbitRadius angle =
             ]
             []
           -- planet
-        , S.circle
-            [ SA.cx <| toString orbitRadius
-            , SA.cy "0"
-            , SA.r <| toString <| 0.005 * worldRadius
-            , SA.fill "#777"
-            , SA.stroke "#ddd"
-            , SA.strokeWidth <| toString <| 0.002 * worldRadius
+        , S.g
+            [ SA.transform <| "translate(" ++ toString orbitRadius ++ ")" ]
+            [ S.circle
+                [ SA.cx "0"
+                , SA.cy "0"
+                , SA.r <| toString <| 0.005 * worldRadius
+                , SA.fill "#777"
+                , SA.stroke "#ddd"
+                , SA.strokeWidth <| toString <| 0.002 * worldRadius
+                ]
+                []
+              -- satellite orbit
+            , S.circle
+                [ SA.cx "0"
+                , SA.cy "0"
+                , SA.r <| toString <| 0.03 * worldRadius
+                , SA.fill "none"
+                , SA.stroke "#ddd"
+                , SA.strokeWidth <| toString <| 0.002 * worldRadius
+                ]
+                []
+              -- satellite
+            , S.circle
+                [ SA.cx <| toString <| 0.03 * worldRadius
+                , SA.cy "0"
+                , SA.r <| toString <| 0.003 * worldRadius
+                , SA.fill "#777"
+                , SA.stroke "#ddd"
+                , SA.strokeWidth <| toString <| 0.002 * worldRadius
+                , SA.transform <| "rotate(" ++ toString (satelliteAngle / degrees 1) ++ ")"
+                ]
+                []
             ]
-            []
-          -- marker
-        , S.circle
-            [ SA.cx <| toString orbitRadius
-            , SA.cy "0"
-            , SA.r <| toString <| 0.03 * worldRadius
-            , SA.fill "none"
-            , SA.stroke "#ddd"
-            , SA.strokeWidth <| toString <| 0.003 * worldRadius
-            ]
-            []
         ]
 
 
@@ -188,10 +202,10 @@ outerWellMarker =
 
 
 -- SHIPS
-
-
 -- shipMesh : Float -> Int -> Ship -> Svg a
-shipMesh opacity (bright, dark) ship =
+
+
+shipMesh opacity ( bright, dark ) ship =
     let
         vertices =
             Ship.transform ship Ship.mesh
@@ -213,7 +227,10 @@ shipMesh opacity (bright, dark) ship =
             []
 
 
+
 -- ship : Int -> Ship -> Svg a
+
+
 ship playersById ship =
     let
         coloration =
@@ -298,19 +315,18 @@ projectile playersById p =
         size =
             0.01 * worldRadius
 
-        (x, y) =
+        ( x, y ) =
             V.toTuple p.position
     in
         S.g
             {- TODO: use linear transforms instead? Run some benchmarks!
-            [ SA.transform <|
-                String.join " " <|
-                    [ "translate(" ++ vectorToString p.position ++ ")"
-                    , "scale(" ++ toString size ++ ")"
-                    ]
-            ]
+               [ SA.transform <|
+                   String.join " " <|
+                       [ "translate(" ++ vectorToString p.position ++ ")"
+                       , "scale(" ++ toString size ++ ")"
+                       ]
+               ]
             -}
-
             []
             [ S.circle
                 [ SA.cx <| toString <| x
@@ -324,7 +340,6 @@ projectile playersById p =
             ]
 
 
-
 score playersById ship =
     let
         ( bright, dark ) =
@@ -332,8 +347,11 @@ score playersById ship =
 
         score =
             case Dict.get ship.controllerId playersById of
-                Just player -> player.score
-                Nothing -> 0
+                Just player ->
+                    player.score
+
+                Nothing ->
+                    0
 
         color c =
             HA.style [ ( "color", c ) ]
@@ -354,9 +372,6 @@ scoreboard playersById shipsById =
         ]
 
 
-
-
-
 viewbox worldSize =
     let
         ( w, h ) =
@@ -374,7 +389,7 @@ game worldSize playersById model =
             ]
           <|
             [ star
-            , planet (worldRadius / 3) model.planetAngle
+            , planet (worldRadius / 3) model.planetAngle model.satelliteAngle
             , outerWellMarker
             ]
                 ++ (List.map (ship playersById) (Dict.values model.shipsById))
