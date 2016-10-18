@@ -6,6 +6,7 @@ import Html as H exposing (Html)
 import Html.Attributes as HA
 import Game exposing (Ship, Projectile, Vector, vectorToString)
 import Random
+import Ship
 import String
 import Svg as S exposing (Svg)
 import Svg.Attributes as SA
@@ -127,10 +128,10 @@ star =
     S.circle
         [ SA.cx "0"
         , SA.cy "0"
-        , SA.r "0.02"
-        , SA.fill "#666"
-        , SA.stroke "#ddd"
-        , SA.strokeWidth "0.002"
+        , SA.r <| toString <| 0.02 * worldRadius
+        , SA.fill "#eee"
+        , SA.stroke "#aaa"
+        , SA.strokeWidth <| toString <| 0.002 * worldRadius
         ]
         []
 
@@ -145,7 +146,7 @@ planet orbitRadius =
             , SA.r <| toString orbitRadius
             , SA.fill "none"
             , SA.stroke "#ddd"
-            , SA.strokeWidth "0.002"
+            , SA.strokeWidth <| toString <| 0.002 * worldRadius
             ]
             []
           -- planet
@@ -155,17 +156,17 @@ planet orbitRadius =
             , SA.r "0.005"
             , SA.fill "#777"
             , SA.stroke "#ddd"
-            , SA.strokeWidth "0.002"
+            , SA.strokeWidth <| toString <| 0.002 * worldRadius
             ]
             []
           -- marker
         , S.circle
             [ SA.cx <| toString orbitRadius
             , SA.cy "0"
-            , SA.r "0.03"
+            , SA.r <| toString <| 0.03 * worldRadius
             , SA.fill "none"
             , SA.stroke "#ddd"
-            , SA.strokeWidth "0.003"
+            , SA.strokeWidth <| toString <| 0.003 * worldRadius
             ]
             []
         ]
@@ -178,7 +179,7 @@ outerWellMarker =
         , SA.r <| toString worldRadius
         , SA.fill "none"
         , SA.stroke "#aaa"
-        , SA.strokeWidth "0.006"
+        , SA.strokeWidth <| toString <| 0.006 * worldRadius
         ]
         []
 
@@ -191,7 +192,7 @@ outerWellMarker =
 shipMesh opacity (bright, dark) ship =
     let
         vertices =
-            Game.shipTransform ship Game.shipMesh
+            Game.shipTransform ship Ship.mesh
                 |> List.map vectorToString
 
         path =
@@ -242,7 +243,7 @@ ship playersById ship =
             Game.Exploding ->
                 let
                     t =
-                        ship.explodeTime / Game.explosionDuration
+                        ship.explodeTime / Ship.explosionDuration
 
                     -- particle count
                     n =
@@ -287,99 +288,39 @@ ship playersById ship =
 -- Projectiles
 
 
-projectileSvg playersById p =
+projectile playersById p =
     let
         ( bright, dark ) =
             getColoration playersById p.ownerControllerId
-    in
-        S.circle
-            [ SA.cx <| toString <| V.getX p.position
-            , SA.cy <| toString <| V.getY p.position
-            , SA.r "1"
-            , SA.fill bright
-            , SA.stroke dark
-            , SA.strokeWidth "0.1"
-            ]
-            []
 
-
--- projectileView : Int -> Projectile -> Svg a
-projectileView colorOffset p =
-    let
         size =
-            0.01
+            0.01 * worldRadius
+
+        (x, y) =
+            V.toTuple p.position
     in
         S.g
+            {- TODO: use linear transforms instead? Run some benchmarks!
             [ SA.transform <|
                 String.join " " <|
                     [ "translate(" ++ vectorToString p.position ++ ")"
                     , "scale(" ++ toString size ++ ")"
                     ]
             ]
-            [ projectileSvg colorOffset p ]
+            -}
 
+            []
+            [ S.circle
+                [ SA.cx <| toString <| x
+                , SA.cy <| toString <| y
+                , SA.r <| toString <| 0.01 * worldRadius
+                , SA.fill bright
+                , SA.stroke dark
+                , SA.strokeWidth <| toString <| 0.001 * worldRadius
+                ]
+                []
+            ]
 
-
-{-
-   selectionCross uiShared game =
-       let
-           fleets =
-               Ui.selectedFleets uiShared game
-
-           addShip ship ( xs, ys ) =
-               ( V.getX ship.currentPosition :: xs, V.getY ship.currentPosition :: ys )
-
-           addFleet id fleet accum =
-               List.foldl addShip accum fleet.ships
-
-           ( xs, ys ) =
-               Dict.foldl addFleet ( [], [] ) fleets
-
-           spacing =
-               0.1
-
-           minX =
-               List.minimum xs |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
-
-           maxX =
-               List.maximum xs |> Maybe.withDefault 0 |> (+) spacing |> min 1
-
-           minY =
-               List.minimum ys |> Maybe.withDefault 0 |> (flip (-)) spacing |> max -1
-
-           maxY =
-               List.maximum ys |> Maybe.withDefault 0 |> (+) spacing |> min 1
-
-           midX =
-               (maxX + minX) / 2
-
-           midY =
-               (maxY + minY) / 2
-
-           line x1 y1 x2 y2 =
-               S.line
-                   [ SA.x1 <| toString x1
-                   , SA.y1 <| toString y1
-                   , SA.x2 <| toString x2
-                   , SA.y2 <| toString y2
-                   , SA.stroke "#0f0"
-                     --                 , SA.opacity "0.2"
-                   , SA.strokeWidth "0.002"
-                   ]
-                   []
-       in
-           if Dict.isEmpty fleets then
-               []
-           else
-               -- left and right horizontal lines
-               [ line -1 midY minX midY
-               , line maxX midY 1 midY
-                 -- vertical lines
-               , line midX -1 midX minY
-               , line midX maxY midX 1
-               ]
--}
----
 
 
 score playersById ship =
@@ -412,7 +353,6 @@ scoreboard playersById shipsById =
 
 
 
----
 
 
 viewbox worldSize =
@@ -436,5 +376,5 @@ game worldSize playersById model =
             , outerWellMarker
             ]
                 ++ (List.map (ship playersById) (Dict.values model.shipsById))
-                ++ (List.map (projectileView playersById) model.projectiles)
+                ++ (List.map (projectile playersById) model.projectiles)
         ]

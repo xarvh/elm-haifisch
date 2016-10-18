@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import List.Extra
 import Math.Vector2 as V
 import Names
+import Ship
 import Time exposing (Time)
 import Random
 
@@ -14,23 +15,7 @@ import Random
 
 
 worldRadius =
-    1.0
-
-
-explosionDuration =
-    1000 * Time.millisecond
-
-
-spawnDuration =
-    3 * Time.second
-
-
-shipSpeed =
-    0.3 * worldRadius / Time.second
-
-
-shipTurningRate =
-    turns 1 / Time.second
+    17 * Ship.length
 
 
 velocityControlThreshold =
@@ -41,40 +26,8 @@ headingControlThreshold =
     0.3
 
 
-fireReloadTime =
-    0.3 * Time.second
-
-
 projectileSpeed =
     1 * worldRadius / Time.second
-
-
-
-{-
-   Ship vertexes, clockwise from the rear
-    ___
-    \  --__
-    /__--
-
--}
-
-
-shipTotalLength =
-    0.06 * worldRadius
-
-
-shipMesh =
-    List.map
-        (V.fromTuple >> V.scale (shipTotalLength / 15))
-        [ ( -3, 0 )
-        , ( -5, 5 )
-        , ( 10, 0 )
-        , ( -5, -5 )
-        ]
-
-
-shipConvexMesh =
-    List.drop 1 shipMesh
 
 
 
@@ -144,7 +97,7 @@ clampToRadius radius v =
         ll =
             V.lengthSquared v
     in
-        if ll <= radius then
+        if ll <= radius * radius then
             v
         else
             V.scale (radius / sqrt ll) v
@@ -372,7 +325,7 @@ shipFireControl dt ship =
     let
         ( newReloadTime, deltas ) =
             if ship.fireControl && ship.reloadTime == 0 then
-                ( fireReloadTime
+                ( Ship.reloadTime
                 , [ D <| AddProjectile (newProjectile ship)
                   , E <| (ShipFires ship.controllerId)
                   ]
@@ -405,7 +358,7 @@ shipMovementControl dt ship =
                         0.85 + 0.15 * cos (vectorToAngle ship.velocityControl - ship.heading)
                 in
                     ship.position
-                        |> V.add (V.scale (f * shipSpeed * dt) ship.velocityControl)
+                        |> V.add (V.scale (f * Ship.speed * dt) ship.velocityControl)
                         |> clampToRadius worldRadius
 
         targetHeading =
@@ -421,7 +374,7 @@ shipMovementControl dt ship =
             normalizeAngle <| targetHeading - ship.heading
 
         maxTurn =
-            shipTurningRate * dt
+            Ship.turningRate * dt
 
         clampedDeltaAngle =
             clamp -maxTurn maxTurn deltaHeading
@@ -489,7 +442,7 @@ shipSpawnTick dt oldShip =
         newRespawnTime =
             oldShip.respawnTime + dt
     in
-        if newRespawnTime > spawnDuration then
+        if newRespawnTime > Ship.spawnDuration then
             ( { oldShip
                 | status = Active
                 , reloadTime = 0
@@ -511,12 +464,12 @@ shipExplodeTick dt oldShip =
         newExplodeTime =
             oldShip.explodeTime + dt
     in
-        if newExplodeTime >= explosionDuration then
+        if newExplodeTime >= Ship.explosionDuration then
             ( oldShip
             , [ D <| RemoveShip oldShip.controllerId ]
             )
         else
-            ( { oldShip | explodeTime = min explosionDuration newExplodeTime }
+            ( { oldShip | explodeTime = min Ship.explosionDuration newExplodeTime }
             , []
             )
 
@@ -549,7 +502,7 @@ projectileTick model dt oldProjectile =
             { oldProjectile | position = newPosition }
 
         collisionWithShip ship =
-            collisionSegmentVsPolygon ( oldProjectile.position, newProjectile.position ) (shipTransform ship shipConvexMesh)
+            collisionSegmentVsPolygon ( oldProjectile.position, newProjectile.position ) (shipTransform ship Ship.convexMesh)
 
         collideWithShip id ship deltas =
             if ship.controllerId /= oldProjectile.ownerControllerId && ship.status == Active && collisionWithShip ship then
