@@ -1,10 +1,11 @@
 module View exposing (..)
 
 import Array exposing (Array)
+import Common exposing (..)
 import Dict exposing (Dict)
 import Html as H exposing (Html)
 import Html.Attributes as HA
-import Game exposing (Ship, Projectile, Vector, vectorToString)
+import Game
 import Random
 import Ship
 import String
@@ -192,7 +193,7 @@ outerWellMarker =
 shipMesh opacity (bright, dark) ship =
     let
         vertices =
-            Game.shipTransform ship Ship.mesh
+            Ship.transform ship Ship.mesh
                 |> List.map vectorToString
 
         path =
@@ -218,10 +219,10 @@ ship playersById ship =
             getColoration playersById ship.controllerId
     in
         case ship.status of
-            Game.Active ->
+            Active ->
                 shipMesh 1.0 coloration ship
 
-            Game.Spawning ->
+            Spawning ->
                 let
                     blinkPeriod =
                         0.25 * Time.second
@@ -240,7 +241,7 @@ ship playersById ship =
                 in
                     shipMesh opacity coloration ship
 
-            Game.Exploding ->
+            Exploding ->
                 let
                     t =
                         ship.explodeTime / Ship.explosionDuration

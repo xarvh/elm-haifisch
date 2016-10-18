@@ -1,10 +1,13 @@
 module Ship exposing (..)
 
+import Common exposing (..)
 import Math.Vector2 as V
 import Time exposing (Time)
 
 
 -- This is used as base unit measure by the whole game
+
+
 length =
     1
 
@@ -27,9 +30,6 @@ explosionDuration =
 
 spawnDuration =
     3 * Time.second
-
-
-
 
 
 
@@ -61,4 +61,16 @@ convexMesh =
 
 
 radius =
-    List.maximum <| List.map V.length convexMesh
+    convexMesh
+        |> List.map V.length
+        |> List.maximum
+        |> Maybe.withDefault 0
+
+
+
+-- HELPERS
+
+
+transform : Ship -> List Vector -> List Vector
+transform ship polygon =
+    List.map (rotateVector ship.heading >> V.add ship.position) polygon
