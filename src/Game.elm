@@ -1,6 +1,8 @@
 module Game exposing (..)
 
 import Array
+import Collision
+import Common exposing (..)
 import Dict exposing (Dict)
 import List.Extra
 import Math.Vector2 as V
@@ -68,223 +70,6 @@ outcomesOverList f oldList =
                 ( newValue :: list, oldOutcomes ++ newOutcomes )
     in
         List.foldl folder ( [], [] ) oldList
-
-
-
--- Linear Algebra helpers
-
-
-type alias Vector =
-    V.Vec2
-
-
-vector =
-    V.vec2
-
-
-v0 =
-    V.vec2 0 0
-
-
-vectorToString : Vector -> String
-vectorToString v =
-    toString (V.getX v) ++ "," ++ toString (V.getY v)
-
-
-clampToRadius : Float -> Vector -> Vector
-clampToRadius radius v =
-    let
-        ll =
-            V.lengthSquared v
-    in
-        if ll <= radius * radius then
-            v
-        else
-            V.scale (radius / sqrt ll) v
-
-
-vectorToAngle : Vector -> Float
-vectorToAngle v =
-    let
-        ( x, y ) =
-            V.toTuple v
-    in
-        atan2 y x
-
-
-angleToVector : Float -> Vector
-angleToVector a =
-    vector (cos a) (sin a)
-
-
-normalizeAngle : Float -> Float
-normalizeAngle a =
-    if a < -pi then
-        a + 2 * pi
-    else if a > pi then
-        a - 2 * pi
-    else
-        a
-
-
-
--- TODO: this normalizes only to within [-pi, +pi], rather than [-pi/2, +pi/2]
---
--- normalizeAngle : Float -> Float
--- normalizeAngle a =
---     let
---         turnsToRemove =
---             truncate <| a / (turns 1)
---     in
---         a - (turnsToRemove * turns 1)
-
-
-rightHandNormal : Vector -> Vector
-rightHandNormal v =
-    let
-        ( x, y ) =
-            V.toTuple v
-    in
-        vector -y x
-
-
-rotateVector : Float -> Vector -> Vector
-rotateVector angle v =
-    let
-        ( x, y ) =
-            V.toTuple v
-
-        sinA =
-            sin angle
-
-        cosA =
-            cos angle
-    in
-        vector
-            (x * cosA - y * sinA)
-            (x * sinA + y * cosA)
-
-
-
--- Collision detection
--- TODO: Needs some optimization
-
-
-type alias Segment =
-    ( Vector, Vector )
-
-
-type alias Polygon =
-    List Vector
-
-
-anySegment : (( Vector, Vector ) -> Bool) -> Polygon -> Bool
-anySegment f poly =
-    let
-        a =
-            Array.fromList poly
-
-        get index =
-            Array.get (index % (Array.length a)) a |> Maybe.withDefault (vector 0 0)
-
-        segments =
-            List.indexedMap (\index v -> ( get index, get (index + 1) )) poly
-    in
-        List.any f segments
-
-
-normalIsSeparatingAxis q ( a, b ) =
-    let
-        n =
-            rightHandNormal <| V.sub b a
-
-        isRightSide p =
-            V.dot n (V.sub p a) > 0
-    in
-        List.all isRightSide q
-
-
-halfCollision : Polygon -> Polygon -> Bool
-halfCollision p q =
-    -- https://www.toptal.com/game/video-game-physics-part-ii-collision-detection-for-solid-objects
-    -- Try polygon p's normals as separating axies.
-    -- If any of them does separe the polys, then the two polys are NOT intersecting
-    not <| anySegment (normalIsSeparatingAxis q) p
-
-
-collisionPolygonVsPolygon : Polygon -> Polygon -> Bool
-collisionPolygonVsPolygon p q =
-    halfCollision p q && halfCollision q p
-
-
-collisionSegmentVsPolygon ( a, b ) p =
-    collisionPolygonVsPolygon [ a, b ] p
-
-
-
--- Deltas describe generic changes in the game model
-
-
-type Delta
-    = AddProjectile Projectile
-    | RemoveProjectile Projectile
-    | DamageShip Int
-    | RemoveShip Int
-
-
-
--- Events are used to notify the parent update of significant events happening within the game.
--- For example, play sounds or update score.
-
-
-type Event
-    = ShipExplodes Int
-    | ShipFires Int
-    | ShipAppears Int
-    | ShipActivates Int
-    | ShipDamagesShip Int Int
-
-
-type Outcome
-    = D Delta
-    | E Event
-
-
-
--- Ships
-
-
-type Status
-    = Spawning
-    | Active
-    | Exploding
-
-
-type alias Ship =
-    { controllerId : Int
-    , velocityControl : Vector
-    , headingControl : Vector
-    , fireControl : Bool
-    , position : Vector
-    , heading : Float
-    , status : Status
-    , name : String
-    , reloadTime : Time
-    , explodeTime : Time
-    , respawnTime : Time
-    }
-
-
-type alias Projectile =
-    { ownerControllerId : Int
-    , position : Vector
-    , heading : Float
-    }
-
-
-shipTransform : Ship -> Polygon -> Polygon
-shipTransform ship polygon =
-    List.map (rotateVector ship.heading >> V.add ship.position) polygon
 
 
 
@@ -502,7 +287,7 @@ projectileTick model dt oldProjectile =
             { oldProjectile | position = newPosition }
 
         collisionWithShip ship =
-            collisionSegmentVsPolygon ( oldProjectile.position, newProjectile.position ) (shipTransform ship Ship.convexMesh)
+            Collision.projectileVsShip oldProjectile.position newProjectile.position ship
 
         collideWithShip id ship deltas =
             if ship.controllerId /= oldProjectile.ownerControllerId && ship.status == Active && collisionWithShip ship then
@@ -552,10 +337,13 @@ splitOutcomes outcomes =
     let
         folder outcome ( deltas, events ) =
             case outcome of
-                D delta -> ( delta :: deltas, events )
-                E event -> ( deltas, event :: events )
+                D delta ->
+                    ( delta :: deltas, events )
+
+                E event ->
+                    ( deltas, event :: events )
     in
-        List.foldl folder ( [], []) outcomes
+        List.foldl folder ( [], [] ) outcomes
 
 
 tick : Time -> Model -> ( Model, List Event )

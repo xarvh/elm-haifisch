@@ -1,9 +1,10 @@
 module Main exposing (..)
 
 import Array exposing (Array)
+import Common exposing (..)
 import Dict exposing (Dict)
 import Gamepad exposing (Gamepad)
-import Game exposing (vector, (|>>))
+import Game exposing ((|>>))
 import Html as H exposing (Html)
 import Html.Attributes as HA
 import Html.App
@@ -24,7 +25,7 @@ type alias Model =
     { game : Game.Model
     , hasGamepads : Bool
     , windowSizeInPixels : Window.Size
-    , windowSizeInGameCoordinates : Game.Vector
+    , windowSizeInGameCoordinates : Vector
     , colorations : Array View.Coloration
     , playersById : Dict Int { score : Int, coloration : View.Coloration }
     }
@@ -125,19 +126,19 @@ animationFrame dt gamepads model =
 
         foldEvent event ( cmds, playersById ) =
             case event of
-                Game.ShipExplodes id ->
+                ShipExplodes id ->
                     ( Ports.playSound "explosion" :: cmds, playersById )
 
-                Game.ShipFires id ->
+                ShipFires id ->
                     ( Ports.playSound "fire" :: cmds, playersById )
 
-                Game.ShipAppears id ->
+                ShipAppears id ->
                     ( cmds, playersById )
 
-                Game.ShipActivates id ->
+                ShipActivates id ->
                     ( Ports.playSound "spawnEnd" :: cmds, playersById )
 
-                Game.ShipDamagesShip attackerId victimId ->
+                ShipDamagesShip attackerId victimId ->
                     (,) cmds <|
                         case Dict.get attackerId playersById of
                             Nothing ->
@@ -168,7 +169,7 @@ resizeWindow sizeInPixels model =
     in
         { model
             | windowSizeInPixels = sizeInPixels
-            , windowSizeInGameCoordinates = Game.vector internalCoordinatesWidth internalCoordinatesHeight
+            , windowSizeInGameCoordinates = vector internalCoordinatesWidth internalCoordinatesHeight
         }
 
 
@@ -208,7 +209,7 @@ init dateNow =
         { game = Game.init seed
         , hasGamepads = False
         , windowSizeInPixels = { width = 800, height = 600 }
-        , windowSizeInGameCoordinates = Game.vector 4 3
+        , windowSizeInGameCoordinates = vector 4 3
         , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> fst
         , playersById = Dict.empty
         }
