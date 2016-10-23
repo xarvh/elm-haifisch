@@ -134,14 +134,15 @@ star =
         []
 
 
-planet orbitRadius planetAngle satelliteAngle =
+planet : Planet -> Svg a
+planet p =
     S.g
-        [ SA.transform <| "rotate(" ++ toString (planetAngle / degrees 1) ++ ")" ]
+        [ SA.transform <| "rotate(" ++ toString (p.angle / degrees 1) ++ ")" ]
         -- orbit
         [ S.circle
             [ SA.cx "0"
             , SA.cy "0"
-            , SA.r <| toString orbitRadius
+            , SA.r <| toString p.orbitRadius
             , SA.fill "none"
             , SA.stroke "#ddd"
             , SA.strokeWidth <| toString <| 0.002 * worldRadius
@@ -149,38 +150,47 @@ planet orbitRadius planetAngle satelliteAngle =
             []
           -- planet
         , S.g
-            [ SA.transform <| "translate(" ++ toString orbitRadius ++ ")" ]
+            [ SA.transform <| "translate(" ++ toString p.orbitRadius ++ ")" ]
+          <|
             [ S.circle
                 [ SA.cx "0"
                 , SA.cy "0"
-                , SA.r <| toString <| 0.005 * worldRadius
+                , SA.r <| toString <| p.surfaceRadius
                 , SA.fill "#777"
                 , SA.stroke "#ddd"
                 , SA.strokeWidth <| toString <| 0.002 * worldRadius
-                ]
-                []
-              -- satellite orbit
-            , S.circle
-                [ SA.cx "0"
-                , SA.cy "0"
-                , SA.r <| toString <| 0.03 * worldRadius
-                , SA.fill "none"
-                , SA.stroke "#ddd"
-                , SA.strokeWidth <| toString <| 0.002 * worldRadius
-                ]
-                []
-              -- satellite
-            , S.circle
-                [ SA.cx <| toString <| 0.03 * worldRadius
-                , SA.cy "0"
-                , SA.r <| toString <| 0.003 * worldRadius
-                , SA.fill "#777"
-                , SA.stroke "#ddd"
-                , SA.strokeWidth <| toString <| 0.002 * worldRadius
-                , SA.transform <| "rotate(" ++ toString (satelliteAngle / degrees 1) ++ ")"
                 ]
                 []
             ]
+                ++ (List.map satellite p.satellites)
+        ]
+
+
+satellite : Satellite -> Svg a
+satellite s =
+    S.g
+        []
+        -- orbit
+        [ S.circle
+            [ SA.cx "0"
+            , SA.cy "0"
+            , SA.r <| toString <| s.orbitRadius
+            , SA.fill "none"
+            , SA.stroke "#ddd"
+            , SA.strokeWidth <| toString <| 0.002 * worldRadius
+            ]
+            []
+          -- surface
+        , S.circle
+            [ SA.cx <| toString <| s.orbitRadius
+            , SA.cy "0"
+            , SA.r <| toString <| 0.003 * worldRadius
+            , SA.fill "#777"
+            , SA.stroke "#ddd"
+            , SA.strokeWidth <| toString <| 0.002 * worldRadius
+            , SA.transform <| "rotate(" ++ toString (s.angle / degrees 1) ++ ")"
+            ]
+            []
         ]
 
 
@@ -385,9 +395,9 @@ game worldSize playersById model =
             ]
           <|
             [ star
-            , planet (worldRadius / 3) model.planetAngle model.satelliteAngle
             , outerWellMarker
             ]
+                ++ (List.map planet model.planets)
                 ++ (List.map (ship playersById) (Dict.values model.shipsById))
                 ++ (List.map (projectile playersById) model.projectiles)
         ]

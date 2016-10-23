@@ -9,7 +9,7 @@ import Time exposing (Time)
 
 
 length =
-    1
+    Common.shipLength
 
 
 speed =

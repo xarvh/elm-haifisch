@@ -7,17 +7,17 @@ import Dict exposing (Dict)
 import List.Extra
 import Math.Vector2 as V
 import Names
+import Planet
 import Ship
 import Time exposing (Time)
 import Random
 
 
 -- Global constants
--- This is used as unit measure of length
 
 
 worldRadius =
-    17 * Ship.length
+    Common.worldRadius
 
 
 planetAngularVelocity =
@@ -87,8 +87,7 @@ outcomesOverList f oldList =
 type alias Model =
     { shipsById : Dict Int Ship
     , projectiles : List Projectile
-    , planetAngle : Float
-    , satelliteAngle : Float
+    , planets : List Planet
     , seed : Random.Seed
     }
 
@@ -101,13 +100,12 @@ init seed =
     { shipsById = Dict.empty
     , projectiles = []
     , seed = seed
-    , planetAngle = fst <| Random.step (Random.float (turns -0.5) (turns 0.5)) seed
-    , satelliteAngle = 0
+    , planets = fst <| Random.step Planet.planetsGenerator seed
     }
 
 
 
--- Game logic
+-- Control
 
 
 newProjectile ship =
@@ -230,7 +228,7 @@ addShip controllerId colorName model =
 
 
 
--- Tick
+-- Ship
 
 
 shipSpawnTick : Time -> Ship -> ( Ship, List Outcome )
@@ -289,6 +287,10 @@ shipTick dt ship =
                 |> shipExplodeTick dt
 
 
+
+-- Projectiles
+
+
 projectileTick : Model -> Time -> Projectile -> ( Projectile, List Outcome )
 projectileTick model dt oldProjectile =
     let
@@ -322,6 +324,31 @@ projectileTick model dt oldProjectile =
                 []
     in
         ( newProjectile, collisionEffets ++ boundaryEffects )
+
+
+
+-- Planets
+
+
+satelliteTick : Time -> Satellite -> Satellite
+satelliteTick dt satellite =
+    { satellite | angle = satellite.angle + dt * satellite.angularSpeed }
+
+
+planetTick : Time -> Planet -> Planet
+planetTick dt planet =
+    let
+        newAngle =
+            normalizeAngle <| planet.angle + dt * planet.angularSpeed
+
+        newSatellites =
+            List.map (satelliteTick dt) planet.satellites
+    in
+        { planet | angle = newAngle, satellites = newSatellites }
+
+
+
+-- Main state stuff
 
 
 applyDelta : Delta -> Model -> Model
@@ -367,12 +394,14 @@ tick dt oldModel =
         ( tickedProjectiles, projectileOutcomes ) =
             outcomesOverList (projectileTick oldModel dt) oldModel.projectiles
 
+        tickedPlanets =
+            List.map (planetTick dt) oldModel.planets
+
         tickedModel =
             { oldModel
                 | shipsById = tickedShipsById
                 , projectiles = tickedProjectiles
-                , planetAngle = normalizeAngle <| oldModel.planetAngle + dt * planetAngularVelocity
-                , satelliteAngle = normalizeAngle <| oldModel.satelliteAngle + dt * satelliteAngularVelocity
+                , planets = tickedPlanets
             }
 
         ( deltas, events ) =

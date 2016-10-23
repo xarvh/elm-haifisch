@@ -4,6 +4,19 @@ import Math.Vector2 as V
 import Time exposing (Time)
 
 
+-- shipLength is used as unit measure
+
+
+shipLength : Float
+shipLength =
+    1.0
+
+
+worldRadius =
+    17 * shipLength
+
+
+
 -- TYPES
 
 
@@ -80,7 +93,24 @@ type alias Projectile =
     }
 
 
+type alias Planet =
+    { orbitRadius : Float
+    , angularSpeed : Float
+    , angle : Float
+    , surfaceRadius : Float
+    , satellites : List Satellite
+    }
 
+
+type alias Satellite =
+    { orbitRadius : Float
+    , angularSpeed : Float
+    , angle : Float
+    }
+
+
+
+-- TODO: move this in an 'Algebra' module?
 -- ALGEBRA
 
 
