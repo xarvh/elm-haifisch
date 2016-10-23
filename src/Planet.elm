@@ -21,7 +21,7 @@ satelliteGenerator : Random.Generator Satellite
 satelliteGenerator =
     Random.map3 Satellite
         (wr <| Random.float 0.01 0.05)
-        (wrS <| Random.float 0.04 0.15)
+        (wrS <| Random.float 0.03 0.15)
         randomAngle
 
 

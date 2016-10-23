@@ -136,23 +136,26 @@ star =
 
 planet : Planet -> Svg a
 planet p =
-    S.g
-        [ SA.transform <| "rotate(" ++ toString (p.angle / degrees 1) ++ ")" ]
-        -- orbit
-        [ S.circle
-            [ SA.cx "0"
-            , SA.cy "0"
-            , SA.r <| toString p.orbitRadius
-            , SA.fill "none"
-            , SA.stroke "#ddd"
-            , SA.strokeWidth <| toString <| 0.002 * worldRadius
-            ]
-            []
-          -- planet
-        , S.g
-            [ SA.transform <| "translate(" ++ toString p.orbitRadius ++ ")" ]
-          <|
-            [ S.circle
+    let
+        x = p.orbitRadius * cos p.angle
+        y = p.orbitRadius * sin p.angle
+
+        transform =
+            "translate(" ++ toString x ++ ", " ++ toString y ++ ")"
+
+        orbit =
+            S.circle
+                [ SA.cx "0"
+                , SA.cy "0"
+                , SA.r <| toString p.orbitRadius
+                , SA.fill "none"
+                , SA.stroke "#ddd"
+                , SA.strokeWidth <| toString <| 0.002 * worldRadius
+                ]
+                []
+
+        planet =
+            S.circle
                 [ SA.cx "0"
                 , SA.cy "0"
                 , SA.r <| toString <| p.surfaceRadius
@@ -161,9 +164,17 @@ planet p =
                 , SA.strokeWidth <| toString <| 0.002 * worldRadius
                 ]
                 []
+
+        satellites =
+            (List.map satellite p.satellites)
+    in
+        S.g
+            []
+            [ orbit
+            , S.g
+                [ SA.transform transform ]
+                ( planet :: satellites )
             ]
-                ++ (List.map satellite p.satellites)
-        ]
 
 
 satellite : Satellite -> Svg a
