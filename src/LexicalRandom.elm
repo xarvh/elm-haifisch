@@ -1,6 +1,8 @@
 module LexicalRandom
     exposing
         ( Lexicon
+        , Fragment (..)
+        , Definition
         , generator
         , capitalize
         , fromString
@@ -46,30 +48,23 @@ choices default array =
 
 {-| Generate a name given a lexicon and a key of that lexicon
 
-    `(String -> String)` is a filler function, called when some definition references a key
+    `String` is a filler string, used when some definition references a key
     that does not exist in the lexicon.
-    It will be called with the missing key as argument, and its return value will be used
-    as the key's value.
-    This can be used, for example, to provide values from a custom dictionary.
 
-    The filler function is also called to break possible infinite recursions caused by a key.
-
-
-    filler key =
-        Dict.get key customKeys |> Maybe.withDefault key
+    The filler function is also used to break possible infinite recursions caused by a key.
 
     nameGenerator =
-        LexicalRandom.generator filler englishGibberishLexicon "properNoun"
+        LexicalRandom.generator "-" englishGibberishLexicon "properNoun"
 
     ( name, seed ) =
         Random.step nameGenerator seed
 -}
-generator : (String -> String) -> Lexicon -> String -> Generator String
+generator : String -> Lexicon -> String -> Generator String
 generator filler lexicon key =
     case Dict.get key lexicon of
         Nothing ->
             -- either the key is plain invalid, or it is stuck in a loop
-            Random.Extra.constant (filler key)
+            Random.Extra.constant filler
 
         Just definitions ->
             let

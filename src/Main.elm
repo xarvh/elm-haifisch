@@ -72,8 +72,15 @@ removeShip ship model =
     Game.update (Game.KillShip ship) model |> fst
 
 
-addShip gamepad model =
-    Game.update (Game.AddShip gamepad.index) model |> fst
+addShip playersById gamepad model =
+    let
+        colorName =
+            Dict.get gamepad.index playersById
+                |> Maybe.map .coloration
+                |> Maybe.map (\(_, _, colorName) -> colorName)
+                |> Maybe.withDefault ""
+    in
+        Game.update (Game.AddShip gamepad.index colorName) model |> fst
 
 
 animationFrame : Time -> List Gamepad -> Model -> ( Model, Cmd Msg )
@@ -103,7 +110,7 @@ animationFrame dt gamepads model =
             model.game
                 |> apply gamepadShip shipsAndGamepads
                 |> apply removeShip shipsWithoutGamepad
-                |> apply addShip gamepadsWithoutShip
+                |> apply (addShip updatedPlayersById) gamepadsWithoutShip
                 |> Game.update (Game.Tick dt)
 
         makePlayer gamepad =
@@ -111,7 +118,7 @@ animationFrame dt gamepads model =
             , controllerId = gamepad.index
             , coloration =
                 Array.get (gamepad.index % Array.length model.colorations) model.colorations
-                    |> Maybe.withDefault ( "", "" )
+                    |> Maybe.withDefault ( "", "", "" )
             , isConnected = True
             }
 

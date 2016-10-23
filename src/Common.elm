@@ -8,7 +8,7 @@ import Time exposing (Time)
 
 
 type alias Coloration =
-    ( String, String )
+    ( String, String, String )
 
 
 type alias Player =

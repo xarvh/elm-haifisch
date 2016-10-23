@@ -1,5 +1,7 @@
 module Names exposing (..)
 
+import Array
+import Dict
 import LexicalRandom
 import Random as Random
 
@@ -53,9 +55,6 @@ superlativeAdjective
     illustrious,splendid,fierce
     amazing,awesome,excellent,fabulous,fantastic,favorable,fortuitous,ineffable,perfect,propitious,spectacular,wondrous
 
-color
-    blue,red,gray,purple,vermillion,yellow,black,white,azure
-
 genericAdjective
     mighty,great,straight,lightning
 
@@ -88,7 +87,9 @@ ship
     {genericAdjective} {properNoun}
     {properNoun}
     {color} {properNoun}
+    {color} {properNoun}
     {genericAdjective} {noun}
+    {color} {noun}
     {color} {noun}
     {superlativeAdjective}
     {exalted}
@@ -97,17 +98,41 @@ fleet
     {color} Fleet
     {properNoun} Fleet
     {noun} Fleet
+
+red
+    red,ruby,crimson,vermillion,fiery,sanguine,burning,searing,
+
+green
+    green,verdant,emerald,jade,lime,viridian
+
+blue
+    blue,sapphire,cerulean,cobalt,ultramarine
+
+cyan
+    azure,cerulean,sky,pale
+
+purple
+    purple,lilac,violet,amethyst
+
+yellow
+    yellow,amber,chrome,ivory,gold,golden,saffron,sand
 """
 
 
-generatorByKey key =
-    LexicalRandom.generator (always "---") defaultLexicon key
-        |> Random.map LexicalRandom.capitalize
+ship colorName =
+    let
+        fragment =
+            LexicalRandom.Key colorName
 
+        definition =
+            [ fragment ]
 
-ship =
-    generatorByKey "ship"
+        entry =
+            Array.fromList
+                [ definition ]
 
-
-fleet =
-    generatorByKey "fleet"
+        lexicon =
+            Dict.insert "color" entry defaultLexicon
+    in
+        LexicalRandom.generator "---" lexicon "ship"
+            |> Random.map LexicalRandom.capitalize

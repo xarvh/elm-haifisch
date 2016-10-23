@@ -40,19 +40,19 @@ colorations : Array Coloration
 colorations =
     Array.fromList
         -- bright, dark
-        [ ( "#f00", "#900" )
-        , ( "#0f0", "#090" )
-        , ( "#00f", "#009" )
-        , ( "#0ee", "#0bb" )
-        , ( "#f0f", "#909" )
-        , ( "#ee0", "#bb0" )
+        [ ( "#f00", "#900", "red" )
+        , ( "#0f0", "#090", "green" )
+        , ( "#00f", "#009", "blue" )
+        , ( "#0ee", "#0bb", "cyan" )
+        , ( "#f0f", "#909", "purple" )
+        , ( "#ee0", "#bb0", "yellow" )
         ]
 
 
 getColoration playersById id =
     Dict.get id playersById
         |> Maybe.map .coloration
-        |> Maybe.withDefault ( "", "" )
+        |> Maybe.withDefault ( "", "", "" )
 
 
 
@@ -201,7 +201,7 @@ outerWellMarker =
 -- shipMesh : Float -> Int -> Ship -> Svg a
 
 
-shipMesh opacity ( bright, dark ) ship =
+shipMesh opacity ( bright, dark, _ ) ship =
     let
         vertices =
             Ship.transform ship Ship.mesh
@@ -268,7 +268,7 @@ ship playersById ship =
                     r =
                         0.1 * worldRadius
 
-                    ( bright, dark ) =
+                    ( bright, dark, _ ) =
                         coloration
 
                     particleByIndex index =
@@ -305,7 +305,7 @@ ship playersById ship =
 
 projectile playersById p =
     let
-        ( bright, dark ) =
+        ( bright, dark, _ ) =
             getColoration playersById p.ownerControllerId
 
         size =
@@ -338,7 +338,7 @@ projectile playersById p =
 
 score shipsById player =
     let
-        ( bright, dark ) =
+        ( bright, dark, _ ) =
             player.coloration
 
         name =

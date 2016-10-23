@@ -209,19 +209,19 @@ randomPosition =
         (Random.float 0 (turns 1))
 
 
-randomShip : Int -> Random.Generator Ship
-randomShip controllerId =
+randomShip : Int -> String -> Random.Generator Ship
+randomShip controllerId colorName =
     Random.map2
         (makeShip controllerId)
         randomPosition
-        Names.ship
+        (Names.ship colorName)
 
 
-addShip : Int -> Model -> Model
-addShip controllerId model =
+addShip : Int -> String -> Model -> Model
+addShip controllerId colorName model =
     let
         ( newShip, newSeed ) =
-            Random.step (randomShip controllerId) model.seed
+            Random.step (randomShip controllerId colorName) model.seed
     in
         { model
             | shipsById = Dict.insert controllerId newShip model.shipsById
@@ -391,7 +391,7 @@ tick dt oldModel =
 type Msg
     = ControlShip Ship ( Vector, Vector, Bool )
     | KillShip Ship
-    | AddShip Int
+    | AddShip Int String
     | Tick Time
 
 
@@ -407,8 +407,8 @@ noEvents m =
 update : Msg -> Model -> ( Model, List Event )
 update msg model =
     case msg of
-        AddShip controllerId ->
-            noEvents <| addShip controllerId model
+        AddShip controllerId colorName ->
+            noEvents <| addShip controllerId colorName model
 
         ControlShip ship ( velocity, heading, isFiring ) ->
             noEvents <| updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
