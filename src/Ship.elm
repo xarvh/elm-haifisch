@@ -1,5 +1,6 @@
 module Ship exposing (..)
 
+import Algebra exposing (..)
 import Common exposing (..)
 import Math.Vector2 as V
 import Time exposing (Time)
@@ -9,7 +10,7 @@ import Time exposing (Time)
 
 
 length =
-    1
+    shipLength
 
 
 speed =

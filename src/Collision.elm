@@ -1,6 +1,7 @@
 module Collision exposing (..)
 
 
+import Algebra exposing (..)
 import Array
 import Common exposing (..)
 import Math.Vector2 as V

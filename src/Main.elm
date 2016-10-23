@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Array exposing (Array)
 import Common exposing (..)
+import Algebra exposing (..)
 import Dict exposing (Dict)
 import Gamepad exposing (Gamepad)
 import Game exposing ((|>>))
@@ -26,11 +27,23 @@ type alias Model =
     , hasGamepads : Bool
     , windowSizeInPixels : Window.Size
     , windowSizeInGameCoordinates : Vector
-    , colorations : Array Coloration
-    , playersById : Dict Int Player
     }
 
 
+
+-- TODO Add thresholds to gamepads controls
+-- velocityControlThreshold =
+--     0.1
+--
+--
+-- headingControlThreshold =
+--     0.3
+--
+--         ignoreVelocityControl =
+--             V.length ship.velocityControl < velocityControlThreshold
+--
+--         ignoreHeadingControl =
+--             V.length ship.headingControl < headingControlThreshold
 
 -- Gamepad guessing
 

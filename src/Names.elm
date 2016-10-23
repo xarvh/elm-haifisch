@@ -100,14 +100,14 @@ fleet
 """
 
 
-generatorByKey key =
-    LexicalRandom.generator (always "---") defaultLexicon key
+generatorByKey filler key =
+    LexicalRandom.generator filler defaultLexicon key
         |> Random.map LexicalRandom.capitalize
 
 
-ship =
-    generatorByKey "ship"
+ship filler =
+    generatorByKey filler "ship"
 
 
-fleet =
-    generatorByKey "fleet"
+-- fleet =
+--     generatorByKey "fleet"

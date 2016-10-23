@@ -1,5 +1,6 @@
 module View exposing (..)
 
+import Algebra exposing (..)
 import Array exposing (Array)
 import Common exposing (..)
 import Dict exposing (Dict)
@@ -20,10 +21,6 @@ import Math.Vector2 as V
 -- TODO: scale most things by worldRadius?
 
 
-worldRadius =
-    Game.worldRadius
-
-
 projectileRadius =
     0.01 * worldRadius
 
@@ -36,17 +33,6 @@ shipStrokWidth =
 -- Player coloration
 
 
-colorations : Array Coloration
-colorations =
-    Array.fromList
-        -- bright, dark
-        [ ( "#f00", "#900" )
-        , ( "#0f0", "#090" )
-        , ( "#00f", "#009" )
-        , ( "#0ee", "#0bb" )
-        , ( "#f0f", "#909" )
-        , ( "#ee0", "#bb0" )
-        ]
 
 
 getColoration playersById id =
