@@ -5,8 +5,8 @@ import Common exposing (..)
 import Dict exposing (Dict)
 import Gamepad exposing (Gamepad)
 import Game exposing ((|>>))
-import Html as H exposing (Html)
-import Html.Attributes as HA
+import StyledHtml as H exposing (Html)
+import StyledHtml.Attributes as HA
 import List.Extra
 import Ports
 import Random
@@ -15,6 +15,7 @@ import Task
 import Window
 import Time exposing (Time)
 import View
+import Style
 
 
 -- Model
@@ -233,9 +234,9 @@ init dateNow =
 view : Model -> Html Msg
 view model =
     H.div
-        [ HA.class "ui"
+        [ HA.class Style.ui
         ]
-        [ View.background
+        [ H.fromHtml <| View.background
         , View.game model.windowSizeInGameCoordinates model.playersById model.game
         , View.splash model.hasGamepads
         , View.scoreboard model.playersById model.game.shipsById

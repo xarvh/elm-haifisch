@@ -4,84 +4,9 @@ body {
     overflow: hidden;
 }
 
-
-.splash-container {
-    position: absolute;
-}
-
-.splash {
-    position: relative;
-    top: 20%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-
-    border: 2px solid #eee;
-    background-color: rgba(255, 255, 255, 0.3);
-    width: 400px;
-    color: #ff8d00;
-    text-align: center;
-}
-
-.splash p {
-    margin: 40px 90px;
-}
-
-
-.scoreboard-container {
-    position: absolute;
-}
-
-.scoreboard {
-}
-
-.scoreboard li {
-    list-style: none;
-    border: 2px solid #eee;
-    font-weight: bold;
-    padding: 5px 10px;
-    margin-bottom: 10px;
-    text-align: right;
-    background-color: rgba(255, 255, 255, 0.3);
-}
-
-.scoreboard .name {
-    font-style: italic;
-}
-
-.scoreboard .score {
-    font-size: 40px;
-    /*line-height: 0;*/
-    margin-top: 0;
-    margin-bottom: 0;
-}
-
-
-
-
-
-.ui {
-    background: black;
-}
-
 .full-window {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
     position: absolute;
-}
-
-
-.ui-background {
-}
-
-
-.star-system-container {
-}
-
-
-
-.info-box {
-    position: absolute;
-    color: white;
-    right: 2vh;
 }

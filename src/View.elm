@@ -3,8 +3,8 @@ module View exposing (..)
 import Array exposing (Array)
 import Common exposing (..)
 import Dict exposing (Dict)
-import Html as H exposing (Html)
-import Html.Attributes as HA
+import StyledHtml as H exposing (Html)
+import StyledHtml.Attributes as HA
 import Game
 import Random
 import Ship
@@ -13,6 +13,7 @@ import Svg as S exposing (Svg)
 import Svg.Attributes as SA
 import Time
 import Math.Vector2 as V
+import Style
 
 
 -- TODO: this module is a mess, needs some reorganisation
@@ -64,9 +65,9 @@ splash hasControllers =
         H.text ""
     else
         H.div
-            [ HA.class "splash-container full-window" ]
+            [ HA.class Style.splashContainer, HA.class Style.fullWindow ]
             [ H.div
-                [ HA.class "splash" ]
+                [ HA.class Style.splash ]
                 [ H.h1
                     []
                     [ H.text "Haifisch" ]
@@ -371,20 +372,20 @@ score shipsById player =
                     "-"
 
         color c =
-            HA.style [ ( "color", c ) ]
+            HA.style [ "color: " ++ c ] []
     in
         H.li
             []
-            [ H.p [ HA.class "name", color bright ] [ H.text name ]
-            , H.p [ HA.class "score", color bright ] [ H.text <| toString player.score ]
+            [ H.p [ HA.class Style.name, color bright ] [ H.text name ]
+            , H.p [ HA.class Style.score, color bright ] [ H.text <| toString player.score ]
             ]
 
 
 scoreboard playersById shipsById =
     H.div
-        [ HA.class "scoreboard-container" ]
+        [ HA.class Style.scoreboardContainer ]
         [ H.ul
-            [ HA.class "scoreboard" ]
+            [ HA.class Style.scoreboard ]
             (List.map (score shipsById) (Dict.values playersById |> List.filter .isConnected))
         ]
 
@@ -400,8 +401,8 @@ viewbox worldSize =
 game : Vector -> Dict Int Player -> Game.Model -> Html a
 game worldSize playersById model =
     H.div
-        [ HA.class "star-system-container full-window" ]
-        [ S.svg
+        [ HA.class Style.starSystemContainer, HA.class Style.fullWindow ]
+        [ H.fromHtml <| S.svg
             [ SA.viewBox (viewbox worldSize)
             ]
           <|
