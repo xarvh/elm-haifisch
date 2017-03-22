@@ -100,7 +100,7 @@ init seed =
     { shipsById = Dict.empty
     , projectiles = []
     , seed = seed
-    , planets = fst <| Random.step Planet.planetsGenerator seed
+    , planets = Tuple.first <| Random.step Planet.planetsGenerator seed
     }
 
 

@@ -33,7 +33,9 @@ angularSpeed orbitRadius =
 
 planetGenerator : Random.Generator Planet
 planetGenerator =
-    Random.map4
+  Random.int 0 4
+    |> Random.andThen (\numberOfSatellites -> Random.list numberOfSatellites satelliteGenerator)
+    |> Random.map4
         (\orbitRadius surfaceRadius angle satellites ->
             { orbitRadius = orbitRadius
             , angularSpeed = angularSpeed orbitRadius
@@ -45,16 +47,9 @@ planetGenerator =
         (wr <| Random.float 0.1 0.9)
         (wr <| Random.float 0.003 0.009)
         randomAngle
-    <|
-        Random.int 0 4
-            `Random.andThen`
-                \numberOfSatellites ->
-                    Random.list numberOfSatellites satelliteGenerator
 
 
 planetsGenerator : Random.Generator (List Planet)
 planetsGenerator =
     Random.int 2 4
-        `Random.andThen`
-            \numberOfPlanets ->
-                Random.list numberOfPlanets planetGenerator
+      |> Random.andThen (\numberOfPlanets -> Random.list numberOfPlanets planetGenerator)

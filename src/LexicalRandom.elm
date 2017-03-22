@@ -43,7 +43,7 @@ type alias Lexicon =
 choices : Generator a -> Array (Generator a) -> Generator a
 choices default array =
     Random.Array.sample array
-        `Random.andThen` (Maybe.withDefault default)
+      |> Random.andThen (Maybe.withDefault default)
 
 
 {-| Generate a name given a lexicon and a key of that lexicon
@@ -82,7 +82,7 @@ generator filler lexicon key =
 
                 definitionToGenerator definition =
                     List.map fragmentToGenerator definition
-                        |> Random.Extra.together
+                        |> Random.Extra.combine
                         |> Random.map (String.join "")
             in
                 Array.map definitionToGenerator definitions
@@ -145,4 +145,4 @@ fromString stringLexicon =
             else
                 ( line, lexicon )
     in
-        snd <| List.foldl addLine ( "default", Dict.empty ) (String.lines stringLexicon)
+        Tuple.second <| List.foldl addLine ( "default", Dict.empty ) (String.lines stringLexicon)

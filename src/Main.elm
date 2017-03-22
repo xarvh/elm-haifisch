@@ -7,7 +7,6 @@ import Gamepad exposing (Gamepad)
 import Game exposing ((|>>))
 import Html as H exposing (Html)
 import Html.Attributes as HA
-import Html.App
 import List.Extra
 import Ports
 import Random
@@ -36,7 +35,7 @@ type alias Model =
 
 
 anyButton buttons =
-    List.any fst buttons
+    List.any Tuple.first buttons
 
 
 guessGamepad gamepad =
@@ -65,11 +64,11 @@ gamepadToCommand gamepad =
 
 
 gamepadShip ( ship, gamepad ) model =
-    Game.update (Game.ControlShip ship <| guessGamepad gamepad) model |> fst
+    Game.update (Game.ControlShip ship <| guessGamepad gamepad) model |> Tuple.first
 
 
 removeShip ship model =
-    Game.update (Game.KillShip ship) model |> fst
+    Game.update (Game.KillShip ship) model |> Tuple.first
 
 
 addShip playersById gamepad model =
@@ -80,7 +79,7 @@ addShip playersById gamepad model =
                 |> Maybe.map (\(_, _, colorName) -> colorName)
                 |> Maybe.withDefault ""
     in
-        Game.update (Game.AddShip gamepad.index colorName) model |> fst
+        Game.update (Game.AddShip gamepad.index colorName) model |> Tuple.first
 
 
 animationFrame : Time -> List Gamepad -> Model -> ( Model, Cmd Msg )
@@ -229,10 +228,10 @@ init dateNow =
         , hasGamepads = False
         , windowSizeInPixels = { width = 800, height = 600 }
         , windowSizeInGameCoordinates = vector 4 3
-        , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> fst
+        , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> Tuple.first
         , playersById = Dict.empty
         }
-            ! [ Task.perform identity WindowResizes Window.size ]
+            ! [ Task.perform WindowResizes Window.size ]
 
 
 view : Model -> Html Msg
@@ -248,7 +247,7 @@ view model =
 
 
 main =
-    Html.App.programWithFlags
+    H.programWithFlags
         { init = init
         , update = update
         , subscriptions =

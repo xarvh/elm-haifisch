@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ADD=build/*
-BUILD="npm run build"
+BUILD="make"
 
 
 CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD`

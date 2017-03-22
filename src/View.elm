@@ -317,7 +317,7 @@ ship playersById ship =
                     S.g
                         [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
                         ]
-                        (List.map particleByIndex [0..n - 1])
+                        (List.map particleByIndex <| List.map toFloat <| List.range 0 <| n - 1)
 
 
 

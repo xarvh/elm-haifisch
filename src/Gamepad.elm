@@ -1,6 +1,6 @@
 module Gamepad exposing (Gamepad, animationFrameAndGamepads)
 
-import Json.Decode as D exposing ((:=))
+import Json.Decode as D
 import Ports
 import Time exposing (Time)
 
@@ -13,25 +13,25 @@ type alias Gamepad =
 
 
 decodeButton =
-    D.tuple2
+    D.map2
         (,)
         D.bool
         D.float
 
 
 decodeGamepad =
-    D.object3
+    D.map3
         Gamepad
-        ("index" := D.int)
-        ("axes" := D.list D.float)
-        ("buttons" := D.list decodeButton)
+        (D.field "index" D.int)
+        (D.field "axes" <| D.list D.float)
+        (D.field "buttons" <| D.list decodeButton)
 
 
 decodeAnimationAndGamepads =
-    D.object2
+    D.map2
         (,)
-        ("dt" := D.float)
-        ("gamepads" := D.list decodeGamepad)
+        (D.field "dt" D.float)
+        (D.field "gamepads" <| D.list decodeGamepad)
 
 
 valueToAnimationAndGamepads : D.Value -> ( Time, List Gamepad )
