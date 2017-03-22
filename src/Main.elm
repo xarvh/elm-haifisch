@@ -59,10 +59,6 @@ guessGamepad gamepad =
 -- Game logic
 
 
-gamepadToCommand gamepad =
-    guessGamepad gamepad
-
-
 gamepadShip ( ship, gamepad ) model =
     Game.update (Game.ControlShip ship <| guessGamepad gamepad) model |> Tuple.first
 

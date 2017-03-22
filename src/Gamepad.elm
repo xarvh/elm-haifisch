@@ -15,8 +15,8 @@ type alias Gamepad =
 decodeButton =
     D.map2
         (,)
-        D.bool
-        D.float
+        (D.index 0 D.bool)
+        (D.index 1 D.float)
 
 
 decodeGamepad =
@@ -36,9 +36,12 @@ decodeAnimationAndGamepads =
 
 valueToAnimationAndGamepads : D.Value -> ( Time, List Gamepad )
 valueToAnimationAndGamepads value =
-    value
-        |> D.decodeValue decodeAnimationAndGamepads
-        |> Result.withDefault ( 0, [] )
+    case D.decodeValue decodeAnimationAndGamepads value of
+        Ok ok ->
+            ok
+
+        Err error ->
+            Debug.crash error
 
 
 
