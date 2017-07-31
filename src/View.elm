@@ -67,10 +67,10 @@ splash title content =
             [ HA.class "splash" ]
             [ H.h1
                 []
-                [ H.text "Haifisch" ]
+                [ H.text title ]
             , H.p
                 []
-                [ H.text "No gamepads detected, you need at least TWO to play." ]
+                [ H.text content ]
             ]
         ]
 

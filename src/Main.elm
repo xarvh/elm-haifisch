@@ -4,7 +4,7 @@ import Array exposing (Array)
 import Common exposing (..)
 import Dict exposing (Dict)
 import Gamepad exposing (Gamepad)
-import Gamepad.Remap
+import Gamepad.Remap exposing (MappableControl(..))
 import GamepadPort
 import LocalStoragePort
 import Game exposing ((|>>))
@@ -20,24 +20,47 @@ import Time exposing (Time)
 import View
 
 
+-- stuff
+
+
+messageNoGamepads =
+    Message "No gamepads detected. You need at least TWO to play."
+
+
+gamepadControls =
+    [ ( A, "Fire" )
+    , ( B, "Fire (different button)" )
+    , ( LeftLeft, "Move left" )
+    , ( LeftRight, "Move right" )
+    , ( LeftUp, "Move up" )
+    , ( LeftDown, "Move down" )
+    , ( RightLeft, "Aim left" )
+    , ( RightRight, "Aim right" )
+    , ( RightUp, "Aim up" )
+    , ( RightDown, "Aim down" )
+    ]
+
+
+
 -- types
 
 
 type Msg
-    = Noop
-    | WindowResizes Window.Size
-    | AnimationFrameAndGamepads ( Time, Gamepad.Blob )
+    = OnWindowResizes Window.Size
+    | OnGamepads ( Time, Gamepad.Blob )
+    | OnRemapMsg Gamepad.Remap.Msg
 
 
 type Status
-    = NoGamepads
-    | Remapping Int (Gamepad.Remap.Model String)
+    = Message String
+    | Remapping (Gamepad.Remap.Model String)
     | Playing
 
 
 type alias Model =
     { game : Game.Model
     , gamepadMaps : Dict String Gamepad.ButtonMap
+    , gamepadLocalStorageKey : String
     , status : Status
     , windowSizeInPixels : Window.Size
     , windowSizeInGameCoordinates : Vector
@@ -67,9 +90,9 @@ getColoration index colorations =
 gamepadToInput : Gamepad -> Input
 gamepadToInput gamepad =
     { index = Gamepad.getIndex gamepad
-    , speed = vector (Gamepad.leftX gamepad) (Gamepad.leftY gamepad)
-    , aim = vector (Gamepad.rightX gamepad) (Gamepad.rightX gamepad)
-    , fire = Gamepad.aIsPressed gamepad
+    , speed = vector (Gamepad.leftX gamepad) -(Gamepad.leftY gamepad)
+    , aim = vector (Gamepad.rightX gamepad) -(Gamepad.rightY gamepad)
+    , fire = Gamepad.aIsPressed gamepad || Gamepad.bIsPressed gamepad
     }
 
 
@@ -241,52 +264,88 @@ resizeWindow sizeInPixels model =
         }
 
 
-animationFrame : Time -> Gamepad.Blob -> Model -> ( Model, Cmd Msg )
-animationFrame dt blob model =
+updateAnimationFrame : Time -> Gamepad.Blob -> Model -> ( Model, Cmd Msg )
+updateAnimationFrame dt blob model =
     let
         connections =
             List.range 0 3
                 |> List.map (Gamepad.getGamepad model.gamepadMaps blob)
 
-        foldConnection connection ( hasUnrecognised, available ) =
+        foldConnection connection ( unrecognised, available ) =
             case connection of
                 Gamepad.Disconnected ->
-                    ( hasUnrecognised, available )
+                    ( unrecognised, available )
 
                 Gamepad.Unrecognised ->
-                    ( True, available )
+                    -- TODO AAAARGH!
+                    ( Just 0, available )
 
                 Gamepad.Available gamepad ->
-                    ( hasUnrecognised, gamepad :: available )
+                    ( unrecognised, gamepad :: available )
 
-        ( hasUnrecognised, availableGamepads ) =
-            List.foldr foldConnection ( False, [] ) connections
+        ( unrecognised, availableGamepads ) =
+            List.foldr foldConnection ( Nothing, [] ) connections
 
         controls =
             --TODO add keyboard.mouse?
             availableGamepads
                 |> List.map gamepadToInput
     in
-        if hasUnrecognised then
-            -- remap
-            noCmd model
-        else if List.length controls < 1 then
-            timeMovesForward dt [] { model | status = NoGamepads }
-        else
-            timeMovesForward dt controls model
+        case unrecognised of
+            Just gamepadIndex ->
+                case model.status of
+                    Remapping _ ->
+                        noCmd model
+
+                    _ ->
+                        noCmd { model | status = Remapping <| Gamepad.Remap.init gamepadIndex gamepadControls }
+
+            Nothing ->
+                if List.length controls < 1 then
+                    timeMovesForward dt [] { model | status = messageNoGamepads }
+                else
+                    timeMovesForward dt controls model
+
+
+updateRemap : Gamepad.Remap.Msg -> Gamepad.Remap.Model String -> Model -> ( Model, Cmd Msg )
+updateRemap remapMsg remapModel model =
+    case Gamepad.Remap.update remapMsg remapModel of
+        Gamepad.Remap.StillOpen newModel ->
+            noCmd { model | status = Remapping newModel }
+
+        Gamepad.Remap.Error message ->
+            noCmd { model | status = Message message }
+
+        Gamepad.Remap.Configured id buttonMap ->
+            let
+                gamepadMaps =
+                    model.gamepadMaps |> Dict.insert id buttonMap
+
+                cmd =
+                    LocalStoragePort.set model.gamepadLocalStorageKey (Gamepad.buttonMapsToString gamepadMaps)
+
+                status =
+                    Message "Configured!"
+            in
+                ( { model | status = status, gamepadMaps = gamepadMaps }, cmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Noop ->
-            noCmd model
-
-        WindowResizes windowSize ->
+        OnWindowResizes windowSize ->
             noCmd <| resizeWindow windowSize model
 
-        AnimationFrameAndGamepads ( dt, blob ) ->
-            animationFrame dt blob model
+        OnGamepads ( dt, blob ) ->
+            updateAnimationFrame dt blob model
+
+        OnRemapMsg remapMsg ->
+            case model.status of
+                Remapping remapModel ->
+                    updateRemap remapMsg remapModel model
+
+                _ ->
+                    noCmd model
 
 
 type alias Flags =
@@ -308,7 +367,8 @@ init flags =
         model =
             { game = Game.init seed
             , gamepadMaps = gamepadMaps
-            , status = NoGamepads
+            , gamepadLocalStorageKey = flags.gamepadButtonMapsKey
+            , status = messageNoGamepads
             , windowSizeInPixels = { width = 800, height = 600 }
             , windowSizeInGameCoordinates = vector 4 3
             , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> Tuple.first
@@ -316,7 +376,7 @@ init flags =
             }
 
         cmd =
-            Task.perform WindowResizes Window.size
+            Task.perform OnWindowResizes Window.size
     in
         ( model, cmd )
 
@@ -327,15 +387,15 @@ viewSplash model =
         Playing ->
             H.text ""
 
-        NoGamepads ->
+        Message message ->
             View.splash
                 "Haifisch"
-                "No gamepads detected, you need at least TWO to play."
+                message
 
-        Remapping index remapModel ->
+        Remapping remapModel ->
             let
                 title =
-                    "Remapping gamepad #" ++ toString index
+                    "Remapping gamepad #" ++ toString (Gamepad.Remap.gamepadIndex remapModel)
 
                 message =
                     Gamepad.Remap.view remapModel
@@ -355,15 +415,18 @@ view model =
         ]
 
 
+subscriptions model =
+    Sub.batch
+        [ Window.resizes OnWindowResizes
+        , GamepadPort.gamepad OnGamepads
+        , Gamepad.Remap.subscriptions GamepadPort.gamepad |> Sub.map OnRemapMsg
+        ]
+
+
 main =
     H.programWithFlags
         { init = init
         , update = update
-        , subscriptions =
-            \model ->
-                Sub.batch
-                    [ GamepadPort.gamepad AnimationFrameAndGamepads
-                    , Window.resizes WindowResizes
-                    ]
+        , subscriptions = subscriptions
         , view = view
         }
