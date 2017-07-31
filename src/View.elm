@@ -59,22 +59,20 @@ getColoration playersById id =
 -- Splash
 
 
-splash hasControllers =
-    if hasControllers then
-        H.text ""
-    else
-        H.div
-            [ HA.class "splash-container full-window" ]
-            [ H.div
-                [ HA.class "splash" ]
-                [ H.h1
-                    []
-                    [ H.text "Haifisch" ]
-                , H.p
-                    []
-                    [ H.text "No gamepads detected, you need at least TWO to play." ]
-                ]
+splash : String -> String -> Html msg
+splash title content =
+    H.div
+        [ HA.class "splash-container full-window" ]
+        [ H.div
+            [ HA.class "splash" ]
+            [ H.h1
+                []
+                [ H.text "Haifisch" ]
+            , H.p
+                []
+                [ H.text "No gamepads detected, you need at least TWO to play." ]
             ]
+        ]
 
 
 
@@ -137,8 +135,11 @@ star =
 planet : Planet -> Svg a
 planet p =
     let
-        x = p.orbitRadius * cos p.angle
-        y = p.orbitRadius * sin p.angle
+        x =
+            p.orbitRadius * cos p.angle
+
+        y =
+            p.orbitRadius * sin p.angle
 
         transform =
             "translate(" ++ toString x ++ ", " ++ toString y ++ ")"
@@ -173,7 +174,7 @@ planet p =
             [ orbit
             , S.g
                 [ SA.transform transform ]
-                ( planet :: satellites )
+                (planet :: satellites)
             ]
 
 
@@ -191,7 +192,8 @@ satellite s =
             , SA.strokeWidth <| toString <| 0.002 * worldRadius
             ]
             []
-          -- surface
+
+        -- surface
         , S.circle
             [ SA.cx <| toString <| s.orbitRadius
             , SA.cy "0"

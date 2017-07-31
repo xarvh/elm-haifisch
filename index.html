@@ -9,13 +9,20 @@
         </style>
         <link rel="stylesheet" type="text/css" href="src/ui.css" />
         <script type="text/javascript" src="build/app.js"></script>
-        <script type="text/javascript" src="src/Ports/Gamepad.js"></script>
+        <script type="text/javascript" src="src/Ports/gamepad.js"></script>
+        <script type="text/javascript" src="src/Ports/localStorage.js"></script>
         <script type="text/javascript" src="src/Ports/Sound.js"></script>
     </head>
     <body>
         <script type="text/javascript">
-            var elmApp = Elm.Main.fullscreen(Date.now())
-            animationFrameAndGamepadsPort(elmApp);
+            var gamepadButtonMapsKey = "gamepadButtonMaps"
+            var elmApp = Elm.Main.fullscreen({
+                dateNow: Date.now(),
+                gamepadButtonMapsKey: gamepadButtonMapsKey,
+                gamepadButtonMaps: localStorage[gamepadButtonMapsKey] || "",
+            });
+            addGamepadPort(elmApp);
+            addLocalStoragePort(elmApp);
             playSoundPort(elmApp);
         </script>
     </body>
