@@ -2,12 +2,13 @@ function addGamepadPort(elmApp) {
 
 
   function copyGamepad(g) {
-    return !g || g.timestamp === 0 ? null : {
+    return !g ? null : {
       axes: g.axes,
       buttons: g.buttons.map(function (b) { return [ b.pressed, b.value ]; }),
       connected: g.connected,
       id: g.id,
       index: g.index,
+      timestamp: g.timestamp,
     };
   }
 
