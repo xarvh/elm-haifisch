@@ -1,15 +1,15 @@
 module Main exposing (..)
 
 import Array exposing (Array)
-import Common exposing (..)
 import Dict exposing (Dict)
 import Gamepad exposing (Gamepad)
 import Gamepad.Remap exposing (MappableControl(..))
 import GamepadPort
 import LocalStoragePort
 import Game exposing ((|>>))
-import Html as H exposing (Html)
-import Html.Attributes as HA
+import Html exposing (..)
+import Html.Attributes exposing (class)
+import Html.Events
 import List.Extra
 import Ports
 import Random
@@ -20,11 +20,12 @@ import Time exposing (Time)
 import View
 
 
+-- TODO remove the unqualified import
+
+import Common exposing (..)
+
+
 -- stuff
-
-
-messageNoGamepads =
-    Message "No gamepads detected. You need at least TWO to play."
 
 
 gamepadControls =
@@ -48,12 +49,15 @@ gamepadControls =
 type Msg
     = OnWindowResizes Window.Size
     | OnGamepads ( Time, Gamepad.Blob )
+    | OnContinue
+    | OnStartRemapping Int
     | OnRemapMsg Gamepad.Remap.Msg
 
 
 type Status
     = Message String
     | Remapping (Gamepad.Remap.Model String)
+    | NoGamepads
     | Playing
 
 
@@ -264,14 +268,19 @@ resizeWindow sizeInPixels model =
         }
 
 
+startRemapping : Int -> Model -> ( Model, Cmd Msg )
+startRemapping gamepadIndex model =
+    noCmd { model | status = Remapping <| Gamepad.Remap.init gamepadIndex gamepadControls }
+
+
 updateAnimationFrame : Time -> Gamepad.Blob -> Model -> ( Model, Cmd Msg )
 updateAnimationFrame dt blob model =
     let
         gamepads =
-          Gamepad.getGamepads model.gamepadDatabase blob
+            Gamepad.getGamepads model.gamepadDatabase blob
 
         maybeFirstUnknown =
-          Gamepad.getUnknownGamepads model.gamepadDatabase blob |> List.head
+            Gamepad.getUnknownGamepads model.gamepadDatabase blob |> List.head
 
         controls =
             --TODO add keyboard.mouse?
@@ -284,13 +293,13 @@ updateAnimationFrame dt blob model =
                         noCmd model
 
                     _ ->
-                        noCmd { model | status = Remapping <| Gamepad.Remap.init (Gamepad.unknownGetIndex unknownGamepad) gamepadControls }
+                        startRemapping (Gamepad.unknownGetIndex unknownGamepad) model
 
             Nothing ->
                 if List.length controls < 1 then
-                    timeMovesForward dt [] { model | status = messageNoGamepads }
+                    timeMovesForward dt [] { model | status = NoGamepads }
                 else
-                    timeMovesForward dt controls model
+                    timeMovesForward dt controls { model | status = Playing }
 
 
 updateRemap : Gamepad.Remap.Msg -> Gamepad.Remap.Model String -> Model -> ( Model, Cmd Msg )
@@ -316,7 +325,7 @@ updateRemap remapMsg remapModel model =
 
                         newModel =
                             { model
-                                | status = Message "Configured!"
+                                | status = Message "Gamepad configured!"
                                 , gamepadDatabase = gamepadDatabase
                             }
                     in
@@ -330,7 +339,21 @@ update msg model =
             noCmd <| resizeWindow windowSize model
 
         OnGamepads ( dt, blob ) ->
-            updateAnimationFrame dt blob model
+            case model.status of
+                NoGamepads ->
+                    updateAnimationFrame dt blob model
+
+                Playing ->
+                    updateAnimationFrame dt blob model
+
+                _ ->
+                    noCmd model
+
+        OnContinue ->
+            noCmd { model | status = Playing }
+
+        OnStartRemapping gamepadIndex ->
+            startRemapping gamepadIndex model
 
         OnRemapMsg remapMsg ->
             case model.status of
@@ -361,7 +384,7 @@ init flags =
             { game = Game.init seed
             , gamepadDatabase = gamepadDatabase
             , gamepadDatabaseLocalStorageKey = flags.gamepadDatabaseLocalStorageKey
-            , status = messageNoGamepads
+            , status = NoGamepads
             , windowSizeInPixels = { width = 800, height = 600 }
             , windowSizeInGameCoordinates = vector 4 3
             , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> Tuple.first
@@ -374,37 +397,56 @@ init flags =
         ( model, cmd )
 
 
-viewSplash : Model -> Html msg
+viewSplash : Model -> Html Msg
 viewSplash model =
     case model.status of
+        NoGamepads ->
+            View.splash
+                "Haifish"
+                [ text "No gamepads detected. You need at least TWO to play." ]
+
         Playing ->
-            H.text ""
+            text ""
 
         Message message ->
             View.splash
-                "Haifisch"
-                message
+                ""
+                [ div
+                    []
+                    [ text message ]
+                , button
+                    [ Html.Events.onClick OnContinue
+                    , class "splash-button"
+                    ]
+                    [ text "Continue" ]
+                ]
 
         Remapping remapModel ->
-            let
-                title =
-                    "Remapping gamepad #" ++ toString (Gamepad.Remap.getTargetGamepadIndex remapModel)
-
-                message =
-                    Gamepad.Remap.view remapModel
-            in
-                View.splash title message
+            View.splash
+                ("Remapping gamepad #" ++ toString (Gamepad.Remap.getTargetGamepadIndex remapModel))
+                [ div
+                    []
+                    [ text "Press the button you want to use for:" ]
+                , div
+                    [ class "remap-target-name"]
+                    [ text <| Gamepad.Remap.view remapModel ]
+                , button
+                    [ Html.Events.onClick OnContinue
+                    , class "splash-button"
+                    ]
+                    [ text "Abort" ]
+                ]
 
 
 view : Model -> Html Msg
 view model =
-    H.div
-        [ HA.class "ui"
+    div
+        [ class "ui"
         ]
         [ View.background
         , View.game model.windowSizeInGameCoordinates model.playersById model.game
         , viewSplash model
-        , View.scoreboard model.playersById model.game.shipsById
+        , View.scoreboard OnStartRemapping model.playersById model.game.shipsById
         ]
 
 
@@ -417,7 +459,7 @@ subscriptions model =
 
 
 main =
-    H.programWithFlags
+    programWithFlags
         { init = init
         , update = update
         , subscriptions = subscriptions

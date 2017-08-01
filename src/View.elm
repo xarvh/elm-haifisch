@@ -4,6 +4,7 @@ import Array exposing (Array)
 import Common exposing (..)
 import Dict exposing (Dict)
 import Html as H exposing (Html)
+import Html.Events as HE
 import Html.Attributes as HA
 import Game
 import Random
@@ -59,18 +60,18 @@ getColoration playersById id =
 -- Splash
 
 
-splash : String -> String -> Html msg
+splash : String -> List (Html msg) -> Html msg
 splash title content =
     H.div
         [ HA.class "splash-container full-window" ]
         [ H.div
             [ HA.class "splash" ]
-            [ H.h1
+            [ H.h2
                 []
                 [ H.text title ]
-            , H.p
-                []
-                [ H.text content ]
+            , H.div
+                [ HA.class "splash-content" ]
+                content
             ]
         ]
 
@@ -359,7 +360,7 @@ projectile playersById p =
             ]
 
 
-score shipsById player =
+score remapMsg shipsById player =
     let
         ( bright, dark, _ ) =
             player.coloration
@@ -377,17 +378,24 @@ score shipsById player =
     in
         H.li
             []
-            [ H.p [ HA.class "name", color bright ] [ H.text name ]
-            , H.p [ HA.class "score", color bright ] [ H.text <| toString player.score ]
+            [ H.p
+                [ HA.class "name", color bright ]
+                [ H.text name ]
+            , H.p
+                [ HA.class "score", color bright ]
+                [ H.text <| toString player.score ]
+            , H.button
+                [ HE.onClick (remapMsg player.controllerId) ]
+                [ H.text "Remap" ]
             ]
 
 
-scoreboard playersById shipsById =
+scoreboard remapMsg playersById shipsById =
     H.div
         [ HA.class "scoreboard-container" ]
         [ H.ul
             [ HA.class "scoreboard" ]
-            (List.map (score shipsById) (Dict.values playersById |> List.filter .isConnected))
+            (List.map (score remapMsg shipsById) (Dict.values playersById |> List.filter .isConnected))
         ]
 
 
