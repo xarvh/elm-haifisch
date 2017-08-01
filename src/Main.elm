@@ -59,8 +59,8 @@ type Status
 
 type alias Model =
     { game : Game.Model
-    , gamepadMaps : Dict String Gamepad.ButtonMap
-    , gamepadLocalStorageKey : String
+    , gamepadDatabase : Gamepad.Database
+    , gamepadDatabaseLocalStorageKey : String
     , status : Status
     , windowSizeInPixels : Window.Size
     , windowSizeInGameCoordinates : Vector
@@ -267,38 +267,24 @@ resizeWindow sizeInPixels model =
 updateAnimationFrame : Time -> Gamepad.Blob -> Model -> ( Model, Cmd Msg )
 updateAnimationFrame dt blob model =
     let
-        connections =
-            List.range 0 3
-                |> List.map (Gamepad.getGamepad model.gamepadMaps blob)
+        gamepads =
+          Gamepad.getGamepads model.gamepadDatabase blob
 
-        foldConnection connection ( unrecognised, available ) =
-            case connection of
-                Gamepad.Disconnected ->
-                    ( unrecognised, available )
-
-                Gamepad.Unrecognised ->
-                    -- TODO AAAARGH!
-                    ( Just 0, available )
-
-                Gamepad.Available gamepad ->
-                    ( unrecognised, gamepad :: available )
-
-        ( unrecognised, availableGamepads ) =
-            List.foldr foldConnection ( Nothing, [] ) connections
+        maybeFirstUnknown =
+          Gamepad.getUnknownGamepads model.gamepadDatabase blob |> List.head
 
         controls =
             --TODO add keyboard.mouse?
-            availableGamepads
-                |> List.map gamepadToInput
+            gamepads |> List.map gamepadToInput
     in
-        case unrecognised of
-            Just gamepadIndex ->
+        case maybeFirstUnknown of
+            Just unknownGamepad ->
                 case model.status of
                     Remapping _ ->
                         noCmd model
 
                     _ ->
-                        noCmd { model | status = Remapping <| Gamepad.Remap.init gamepadIndex gamepadControls }
+                        noCmd { model | status = Remapping <| Gamepad.Remap.init (Gamepad.unknownGetIndex unknownGamepad) gamepadControls }
 
             Nothing ->
                 if List.length controls < 1 then
@@ -316,18 +302,25 @@ updateRemap remapMsg remapModel model =
         Gamepad.Remap.Error message ->
             noCmd { model | status = Message message }
 
-        Gamepad.Remap.Configured id buttonMap ->
-            let
-                gamepadMaps =
-                    model.gamepadMaps |> Dict.insert id buttonMap
+        Gamepad.Remap.UpdateDatabase updateDatabase ->
+            case updateDatabase model.gamepadDatabase of
+                Err message ->
+                    noCmd { model | status = Message message }
 
-                cmd =
-                    LocalStoragePort.set model.gamepadLocalStorageKey (Gamepad.buttonMapsToString gamepadMaps)
+                Ok gamepadDatabase ->
+                    let
+                        cmd =
+                            gamepadDatabase
+                                |> Gamepad.databaseToString
+                                |> LocalStoragePort.set model.gamepadDatabaseLocalStorageKey
 
-                status =
-                    Message "Configured!"
-            in
-                ( { model | status = status, gamepadMaps = gamepadMaps }, cmd )
+                        newModel =
+                            { model
+                                | status = Message "Configured!"
+                                , gamepadDatabase = gamepadDatabase
+                            }
+                    in
+                        ( newModel, cmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -350,8 +343,8 @@ update msg model =
 
 type alias Flags =
     { dateNow : Int
-    , gamepadButtonMapsKey : String
-    , gamepadButtonMaps : String
+    , gamepadDatabaseLocalStorageKey : String
+    , gamepadDatabaseAsString : String
     }
 
 
@@ -361,13 +354,13 @@ init flags =
         seed =
             Random.initialSeed flags.dateNow
 
-        gamepadMaps =
-            Gamepad.buttonMapsFromString flags.gamepadButtonMaps |> Result.withDefault Dict.empty
+        gamepadDatabase =
+            Gamepad.databaseFromString flags.gamepadDatabaseAsString |> Result.withDefault Gamepad.emptyDatabase
 
         model =
             { game = Game.init seed
-            , gamepadMaps = gamepadMaps
-            , gamepadLocalStorageKey = flags.gamepadButtonMapsKey
+            , gamepadDatabase = gamepadDatabase
+            , gamepadDatabaseLocalStorageKey = flags.gamepadDatabaseLocalStorageKey
             , status = messageNoGamepads
             , windowSizeInPixels = { width = 800, height = 600 }
             , windowSizeInGameCoordinates = vector 4 3
@@ -395,7 +388,7 @@ viewSplash model =
         Remapping remapModel ->
             let
                 title =
-                    "Remapping gamepad #" ++ toString (Gamepad.Remap.gamepadIndex remapModel)
+                    "Remapping gamepad #" ++ toString (Gamepad.Remap.getTargetGamepadIndex remapModel)
 
                 message =
                     Gamepad.Remap.view remapModel
