@@ -2,8 +2,8 @@ module Main exposing (..)
 
 import Array exposing (Array)
 import Dict exposing (Dict)
-import Gamepad exposing (Gamepad)
-import Gamepad.Remap exposing (MappableControl(..))
+import Gamepad exposing (Gamepad, Destination(..))
+import Gamepad.Remap
 import GamepadPort
 import LocalStoragePort
 import Game exposing ((|>>))
@@ -312,24 +312,22 @@ updateRemap remapMsg remapModel model =
             noCmd { model | status = Message message }
 
         Gamepad.Remap.UpdateDatabase updateDatabase ->
-            case updateDatabase model.gamepadDatabase of
-                Err message ->
-                    noCmd { model | status = Message message }
+            let
+                gamepadDatabase =
+                    updateDatabase model.gamepadDatabase
 
-                Ok gamepadDatabase ->
-                    let
-                        cmd =
-                            gamepadDatabase
-                                |> Gamepad.databaseToString
-                                |> LocalStoragePort.set model.gamepadDatabaseLocalStorageKey
+                cmd =
+                    gamepadDatabase
+                        |> Gamepad.databaseToString
+                        |> LocalStoragePort.set model.gamepadDatabaseLocalStorageKey
 
-                        newModel =
-                            { model
-                                | status = Message "Gamepad configured!"
-                                , gamepadDatabase = gamepadDatabase
-                            }
-                    in
-                        ( newModel, cmd )
+                newModel =
+                    { model
+                        | status = Message "Gamepad configured!"
+                        , gamepadDatabase = gamepadDatabase
+                    }
+            in
+                ( newModel, cmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -428,7 +426,7 @@ viewSplash model =
                     []
                     [ text "Press the button you want to use for:" ]
                 , div
-                    [ class "remap-target-name"]
+                    [ class "remap-target-name" ]
                     [ text <| Gamepad.Remap.view remapModel ]
                 , button
                     [ Html.Events.onClick OnContinue
