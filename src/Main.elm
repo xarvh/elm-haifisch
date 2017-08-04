@@ -1,12 +1,15 @@
 module Main exposing (..)
 
 import Array exposing (Array)
-import Common exposing (..)
 import Dict exposing (Dict)
-import Gamepad exposing (Gamepad)
+import Gamepad exposing (Gamepad, Destination(..))
+import Gamepad.Remap
+import GamepadPort
+import LocalStoragePort
 import Game exposing ((|>>))
-import Html as H exposing (Html)
-import Html.Attributes as HA
+import Html exposing (..)
+import Html.Attributes exposing (class)
+import Html.Events
 import List.Extra
 import Ports
 import Random
@@ -17,12 +20,52 @@ import Time exposing (Time)
 import View
 
 
--- Model
+-- TODO remove the unqualified import
+
+import Common exposing (..)
+
+
+-- stuff
+
+
+gamepadControls =
+    [ ( A, "Fire" )
+    , ( B, "Fire (different button)" )
+    , ( LeftLeft, "Move left" )
+    , ( LeftRight, "Move right" )
+    , ( LeftUp, "Move up" )
+    , ( LeftDown, "Move down" )
+    , ( RightLeft, "Aim left" )
+    , ( RightRight, "Aim right" )
+    , ( RightUp, "Aim up" )
+    , ( RightDown, "Aim down" )
+    ]
+
+
+
+-- types
+
+
+type Msg
+    = OnWindowResizes Window.Size
+    | OnGamepads ( Time, Gamepad.Blob )
+    | OnContinue
+    | OnStartRemapping Int
+    | OnRemapMsg Gamepad.Remap.Msg
+
+
+type Status
+    = Message String
+    | Remapping (Gamepad.Remap.Model String)
+    | NoGamepads
+    | Playing
 
 
 type alias Model =
     { game : Game.Model
-    , hasGamepads : Bool
+    , gamepadDatabase : Gamepad.Database
+    , gamepadDatabaseLocalStorageKey : String
+    , status : Status
     , windowSizeInPixels : Window.Size
     , windowSizeInGameCoordinates : Vector
     , colorations : Array Coloration
@@ -30,101 +73,149 @@ type alias Model =
     }
 
 
+type alias Input =
+    { index : Int
+    , speed : Vector
+    , aim : Vector
+    , fire : Bool
+    }
 
--- Gamepad guessing
 
 
-anyButton buttons =
-    List.any Tuple.first buttons
+-- helpers
 
 
-guessGamepad gamepad =
-    case gamepad.axes of
-        -- Some Xbox 360 in Chrom
-        xLeftStick :: yLeftStick :: xRightStick :: yRightStick :: [] ->
-            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, anyButton gamepad.buttons )
+getColoration : Int -> Array Coloration -> Coloration
+getColoration index colorations =
+    Array.get (index % Array.length colorations) colorations
+        |> Maybe.withDefault ( "", "", "" )
 
-        xLeftStick :: yLeftStick :: leftTrigger :: xRightStick :: yRightStick :: yRightTrigger :: [] ->
-            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, anyButton gamepad.buttons )
 
-        -- Xbox 360 in Firefox
-        xLeftStick :: yLeftStick :: leftTrigger :: xRightStick :: yRightStick :: yRightTrigger :: xPad :: yPad :: [] ->
-            ( vector xLeftStick yLeftStick, vector xRightStick yRightStick, anyButton gamepad.buttons )
+gamepadToInput : Gamepad -> Input
+gamepadToInput gamepad =
+    { index = Gamepad.getIndex gamepad
+    , speed = vector (Gamepad.leftX gamepad) -(Gamepad.leftY gamepad)
+    , aim = vector (Gamepad.rightX gamepad) -(Gamepad.rightY gamepad)
+    , fire = Gamepad.aIsPressed gamepad || Gamepad.bIsPressed gamepad
+    }
 
-        _ ->
-            ( vector 0 0, vector 0 0, False )
+
+inputToTuple : Input -> ( Vector, Vector, Bool )
+inputToTuple input =
+    ( input.speed, input.aim, input.fire )
+
+
+flippedFold : (a -> b -> b) -> List a -> b -> b
+flippedFold f list oldB =
+    List.foldl f oldB list
 
 
 
 -- Game logic
 
 
-gamepadShip ( ship, gamepad ) model =
-    Game.update (Game.ControlShip ship <| guessGamepad gamepad) model |> Tuple.first
+foldEvent : Event -> ( List (Cmd msg), Dict Int Player ) -> ( List (Cmd msg), Dict Int Player )
+foldEvent event ( cmds, playersById ) =
+    case event of
+        ShipExplodes id ->
+            ( Ports.playSound "explosion" :: cmds, playersById )
+
+        ShipFires id ->
+            ( Ports.playSound "fire" :: cmds, playersById )
+
+        ShipAppears id ->
+            ( cmds, playersById )
+
+        ShipActivates id ->
+            ( Ports.playSound "spawnEnd" :: cmds, playersById )
+
+        ShipDamagesShip attackerId victimId ->
+            (,) cmds <|
+                case Dict.get attackerId playersById of
+                    Nothing ->
+                        playersById
+
+                    Just player ->
+                        Dict.insert attackerId { player | score = player.score + 1 } playersById
 
 
+applyInputToShip : ( Ship, Input ) -> Game.Model -> Game.Model
+applyInputToShip ( ship, input ) model =
+    Game.update (Game.ControlShip ship (inputToTuple input)) model |> Tuple.first
+
+
+removeShip : Ship -> Game.Model -> Game.Model
 removeShip ship model =
     Game.update (Game.KillShip ship) model |> Tuple.first
 
 
-addShip playersById gamepad model =
+addShip : Dict Int Player -> Input -> Game.Model -> Game.Model
+addShip playersById input model =
     let
         colorName =
-            Dict.get gamepad.index playersById
+            Dict.get input.index playersById
                 |> Maybe.map .coloration
-                |> Maybe.map (\(_, _, colorName) -> colorName)
+                |> Maybe.map (\( _, _, colorName ) -> colorName)
                 |> Maybe.withDefault ""
     in
-        Game.update (Game.AddShip gamepad.index colorName) model |> Tuple.first
+        Game.update (Game.AddShip input.index colorName) model |> Tuple.first
 
 
-animationFrame : Time -> List Gamepad -> Model -> ( Model, Cmd Msg )
-animationFrame dt gamepads model =
+timeMovesForward : Float -> List Input -> Model -> ( Model, Cmd Msg )
+timeMovesForward dt controls model =
     let
-        {- there are three cases than need be covered:
-           * ships associated to a gamepad
-           * ships without gamepad
-           * gamepads without ships
-        -}
-        folder ship ( shipsAndGamepads, shipsWithoutGamepad, remainingGamepads ) =
-            case List.Extra.find (\gp -> gp.index == ship.controllerId) remainingGamepads of
-                Just gamepad ->
-                    ( ( ship, gamepad ) :: shipsAndGamepads, shipsWithoutGamepad, List.Extra.remove gamepad remainingGamepads )
+        ships =
+            Dict.values model.game.shipsById
 
-                Nothing ->
-                    ( shipsAndGamepads, ship :: shipsWithoutGamepad, remainingGamepads )
+        findShipInput : Ship -> Maybe ( Ship, Input )
+        findShipInput ship =
+            controls
+                |> List.Extra.find (\control -> control.index == ship.controllerId)
+                |> Maybe.map ((,) ship)
 
-        ( shipsAndGamepads, shipsWithoutGamepad, gamepadsWithoutShip ) =
-            List.foldl folder ( [], [], gamepads ) (Dict.values model.game.shipsById)
+        -- Find all ships that HAVE a controller
+        controlledShips : List ( Ship, Input )
+        controlledShips =
+            ships
+                |> List.map findShipInput
+                |> List.filterMap identity
 
-        apply : (a -> b -> b) -> List a -> b -> b
-        apply f list oldB =
-            List.foldl f oldB list
+        -- Find all ships that DO NOT have a controller
+        abandonedShips : List Ship
+        abandonedShips =
+            ships
+                |> List.filter (findShipInput >> (==) Nothing)
+
+        -- Find all controls that DO NOT have a ship
+        freeInputs : List Input
+        freeInputs =
+            controls
+                |> List.filter (\control -> Dict.get control.index model.game.shipsById == Nothing)
 
         ( newGame, events ) =
             model.game
-                |> apply gamepadShip shipsAndGamepads
-                |> apply removeShip shipsWithoutGamepad
-                |> apply (addShip updatedPlayersById) gamepadsWithoutShip
+                |> flippedFold applyInputToShip controlledShips
+                |> flippedFold removeShip abandonedShips
+                |> flippedFold (addShip updatedPlayersById) freeInputs
                 |> Game.update (Game.Tick dt)
 
-        makePlayer gamepad =
+        makePlayer : Input -> Player
+        makePlayer control =
             { score = 0
-            , controllerId = gamepad.index
-            , coloration =
-                Array.get (gamepad.index % Array.length model.colorations) model.colorations
-                    |> Maybe.withDefault ( "", "", "" )
+            , controllerId = control.index
+            , coloration = getColoration control.index model.colorations
             , isConnected = True
             }
 
-        connectPlayer gamepad playersById =
+        connectPlayer : Input -> Dict Int Player -> Dict Int Player
+        connectPlayer control playersById =
             let
                 updatedPlayer =
-                    Dict.get gamepad.index playersById
-                        |> Maybe.withDefault (makePlayer gamepad)
+                    Dict.get control.index playersById |> Maybe.withDefault (makePlayer control)
             in
-                Dict.insert gamepad.index { updatedPlayer | isConnected = True } playersById
+                Dict.insert control.index { updatedPlayer | isConnected = True } playersById
 
+        disconnectPlayer : Ship -> Dict Int Player -> Dict Int Player
         disconnectPlayer ship playersById =
             case Dict.get ship.controllerId playersById of
                 Nothing ->
@@ -133,43 +224,33 @@ animationFrame dt gamepads model =
                 Just player ->
                     Dict.insert ship.controllerId { player | isConnected = False } playersById
 
+        updatedPlayersById : Dict Int Player
         updatedPlayersById =
             model.playersById
-                |> apply connectPlayer gamepadsWithoutShip
-                |> apply disconnectPlayer shipsWithoutGamepad
-
-        foldEvent event ( cmds, playersById ) =
-            case event of
-                ShipExplodes id ->
-                    ( Ports.playSound "explosion" :: cmds, playersById )
-
-                ShipFires id ->
-                    ( Ports.playSound "fire" :: cmds, playersById )
-
-                ShipAppears id ->
-                    ( cmds, playersById )
-
-                ShipActivates id ->
-                    ( Ports.playSound "spawnEnd" :: cmds, playersById )
-
-                ShipDamagesShip attackerId victimId ->
-                    (,) cmds <|
-                        case Dict.get attackerId playersById of
-                            Nothing ->
-                                playersById
-
-                            Just player ->
-                                Dict.insert attackerId { player | score = player.score + 1 } playersById
+                |> flippedFold connectPlayer freeInputs
+                |> flippedFold disconnectPlayer abandonedShips
 
         ( soundCmds, scoredPlayersById ) =
             List.foldl foldEvent ( [], updatedPlayersById ) events
+
+        newModel =
+            { model
+                | game = newGame
+                , playersById = scoredPlayersById
+            }
+
+        cmd =
+            Cmd.batch soundCmds
     in
-        { model
-            | game = newGame
-            , hasGamepads = gamepads /= []
-            , playersById = scoredPlayersById
-        }
-            ! soundCmds
+        ( newModel, cmd )
+
+
+
+-- update
+
+
+noCmd model =
+    ( model, Cmd.none )
 
 
 resizeWindow : Window.Size -> Model -> Model
@@ -187,70 +268,198 @@ resizeWindow sizeInPixels model =
         }
 
 
+startRemapping : Int -> Model -> ( Model, Cmd Msg )
+startRemapping gamepadIndex model =
+    noCmd { model | status = Remapping <| Gamepad.Remap.init gamepadIndex gamepadControls }
 
--- Boilerplate stuff
+
+updateAnimationFrame : Time -> Gamepad.Blob -> Model -> ( Model, Cmd Msg )
+updateAnimationFrame dt blob model =
+    let
+        gamepads =
+            Gamepad.getGamepads model.gamepadDatabase blob
+
+        maybeFirstUnknown =
+            Gamepad.getUnknownGamepads model.gamepadDatabase blob |> List.head
+
+        controls =
+            --TODO add keyboard.mouse?
+            gamepads |> List.map gamepadToInput
+    in
+        case maybeFirstUnknown of
+            Just unknownGamepad ->
+                case model.status of
+                    Remapping _ ->
+                        noCmd model
+
+                    _ ->
+                        startRemapping (Gamepad.unknownGetIndex unknownGamepad) model
+
+            Nothing ->
+                if List.length controls < 1 then
+                    timeMovesForward dt [] { model | status = NoGamepads }
+                else
+                    timeMovesForward dt controls { model | status = Playing }
 
 
-type Msg
-    = Noop
-    | WindowResizes Window.Size
-    | AnimationFrameAndGamepads ( Time, List Gamepad )
+updateRemap : Gamepad.Remap.Msg -> Gamepad.Remap.Model String -> Model -> ( Model, Cmd Msg )
+updateRemap remapMsg remapModel model =
+    case Gamepad.Remap.update remapMsg remapModel of
+        Gamepad.Remap.StillOpen newModel ->
+            noCmd { model | status = Remapping newModel }
+
+        Gamepad.Remap.Error message ->
+            noCmd { model | status = Message message }
+
+        Gamepad.Remap.UpdateDatabase updateDatabase ->
+            let
+                gamepadDatabase =
+                    updateDatabase model.gamepadDatabase
+
+                cmd =
+                    gamepadDatabase
+                        |> Gamepad.databaseToString
+                        |> LocalStoragePort.set model.gamepadDatabaseLocalStorageKey
+
+                newModel =
+                    { model
+                        | status = Message "Gamepad configured!"
+                        , gamepadDatabase = gamepadDatabase
+                    }
+            in
+                ( newModel, cmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Noop ->
-            model ! []
+        OnWindowResizes windowSize ->
+            noCmd <| resizeWindow windowSize model
 
-        WindowResizes windowSize ->
-            resizeWindow windowSize model ! []
+        OnGamepads ( dt, blob ) ->
+            case model.status of
+                NoGamepads ->
+                    updateAnimationFrame dt blob model
 
-        AnimationFrameAndGamepads ( dt, gamepads ) ->
-            -- Work around a bug in Gamepad https://github.com/xarvh/elm-gamepad/issues/2
-            if dt < 0 then
-                model ! []
-            else
-                animationFrame dt gamepads model
+                Playing ->
+                    updateAnimationFrame dt blob model
+
+                _ ->
+                    noCmd model
+
+        OnContinue ->
+            noCmd { model | status = Playing }
+
+        OnStartRemapping gamepadIndex ->
+            startRemapping gamepadIndex model
+
+        OnRemapMsg remapMsg ->
+            case model.status of
+                Remapping remapModel ->
+                    updateRemap remapMsg remapModel model
+
+                _ ->
+                    noCmd model
 
 
-init : Int -> ( Model, Cmd Msg )
-init dateNow =
+type alias Flags =
+    { dateNow : Int
+    , gamepadDatabaseLocalStorageKey : String
+    , gamepadDatabaseAsString : String
+    }
+
+
+init : Flags -> ( Model, Cmd Msg )
+init flags =
     let
         seed =
-            Random.initialSeed dateNow
+            Random.initialSeed flags.dateNow
+
+        gamepadDatabase =
+            Gamepad.databaseFromString flags.gamepadDatabaseAsString |> Result.withDefault Gamepad.emptyDatabase
+
+        model =
+            { game = Game.init seed
+            , gamepadDatabase = gamepadDatabase
+            , gamepadDatabaseLocalStorageKey = flags.gamepadDatabaseLocalStorageKey
+            , status = NoGamepads
+            , windowSizeInPixels = { width = 800, height = 600 }
+            , windowSizeInGameCoordinates = vector 4 3
+            , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> Tuple.first
+            , playersById = Dict.empty
+            }
+
+        cmd =
+            Task.perform OnWindowResizes Window.size
     in
-        { game = Game.init seed
-        , hasGamepads = False
-        , windowSizeInPixels = { width = 800, height = 600 }
-        , windowSizeInGameCoordinates = vector 4 3
-        , colorations = Random.step (Random.Array.shuffle View.colorations) seed |> Tuple.first
-        , playersById = Dict.empty
-        }
-            ! [ Task.perform WindowResizes Window.size ]
+        ( model, cmd )
+
+
+viewSplash : Model -> Html Msg
+viewSplash model =
+    case model.status of
+        NoGamepads ->
+            View.splash
+                "Haifish"
+                [ text "No gamepads detected. You need at least TWO to play." ]
+
+        Playing ->
+            text ""
+
+        Message message ->
+            View.splash
+                ""
+                [ div
+                    []
+                    [ text message ]
+                , button
+                    [ Html.Events.onClick OnContinue
+                    , class "splash-button"
+                    ]
+                    [ text "Continue" ]
+                ]
+
+        Remapping remapModel ->
+            View.splash
+                ("Remapping gamepad #" ++ toString (Gamepad.Remap.getTargetGamepadIndex remapModel))
+                [ div
+                    []
+                    [ text "Press the button you want to use for:" ]
+                , div
+                    [ class "remap-target-name" ]
+                    [ text <| Gamepad.Remap.view remapModel ]
+                , button
+                    [ Html.Events.onClick OnContinue
+                    , class "splash-button"
+                    ]
+                    [ text "Abort" ]
+                ]
 
 
 view : Model -> Html Msg
 view model =
-    H.div
-        [ HA.class "ui"
+    div
+        [ class "ui"
         ]
         [ View.background
         , View.game model.windowSizeInGameCoordinates model.playersById model.game
-        , View.splash model.hasGamepads
-        , View.scoreboard model.playersById model.game.shipsById
+        , viewSplash model
+        , View.scoreboard OnStartRemapping model.playersById model.game.shipsById
+        ]
+
+
+subscriptions model =
+    Sub.batch
+        [ Window.resizes OnWindowResizes
+        , GamepadPort.gamepad OnGamepads
+        , Gamepad.Remap.subscriptions GamepadPort.gamepad |> Sub.map OnRemapMsg
         ]
 
 
 main =
-    H.programWithFlags
+    programWithFlags
         { init = init
         , update = update
-        , subscriptions =
-            \model ->
-                Sub.batch
-                    [ Gamepad.animationFrameAndGamepads AnimationFrameAndGamepads
-                    , Window.resizes WindowResizes
-                    ]
+        , subscriptions = subscriptions
         , view = view
         }

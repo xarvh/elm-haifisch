@@ -4,6 +4,7 @@ import Array exposing (Array)
 import Common exposing (..)
 import Dict exposing (Dict)
 import Html as H exposing (Html)
+import Html.Events as HE
 import Html.Attributes as HA
 import Game
 import Random
@@ -59,22 +60,20 @@ getColoration playersById id =
 -- Splash
 
 
-splash hasControllers =
-    if hasControllers then
-        H.text ""
-    else
-        H.div
-            [ HA.class "splash-container full-window" ]
-            [ H.div
-                [ HA.class "splash" ]
-                [ H.h1
-                    []
-                    [ H.text "Haifisch" ]
-                , H.p
-                    []
-                    [ H.text "No gamepads detected, you need at least TWO to play." ]
-                ]
+splash : String -> List (Html msg) -> Html msg
+splash title content =
+    H.div
+        [ HA.class "splash-container full-window" ]
+        [ H.div
+            [ HA.class "splash" ]
+            [ H.h2
+                []
+                [ H.text title ]
+            , H.div
+                [ HA.class "splash-content" ]
+                content
             ]
+        ]
 
 
 
@@ -137,8 +136,11 @@ star =
 planet : Planet -> Svg a
 planet p =
     let
-        x = p.orbitRadius * cos p.angle
-        y = p.orbitRadius * sin p.angle
+        x =
+            p.orbitRadius * cos p.angle
+
+        y =
+            p.orbitRadius * sin p.angle
 
         transform =
             "translate(" ++ toString x ++ ", " ++ toString y ++ ")"
@@ -173,7 +175,7 @@ planet p =
             [ orbit
             , S.g
                 [ SA.transform transform ]
-                ( planet :: satellites )
+                (planet :: satellites)
             ]
 
 
@@ -191,7 +193,8 @@ satellite s =
             , SA.strokeWidth <| toString <| 0.002 * worldRadius
             ]
             []
-          -- surface
+
+        -- surface
         , S.circle
             [ SA.cx <| toString <| s.orbitRadius
             , SA.cy "0"
@@ -357,7 +360,7 @@ projectile playersById p =
             ]
 
 
-score shipsById player =
+score remapMsg shipsById player =
     let
         ( bright, dark, _ ) =
             player.coloration
@@ -375,17 +378,24 @@ score shipsById player =
     in
         H.li
             []
-            [ H.p [ HA.class "name", color bright ] [ H.text name ]
-            , H.p [ HA.class "score", color bright ] [ H.text <| toString player.score ]
+            [ H.p
+                [ HA.class "name", color bright ]
+                [ H.text name ]
+            , H.p
+                [ HA.class "score", color bright ]
+                [ H.text <| toString player.score ]
+            , H.button
+                [ HE.onClick (remapMsg player.controllerId) ]
+                [ H.text "Remap" ]
             ]
 
 
-scoreboard playersById shipsById =
+scoreboard remapMsg playersById shipsById =
     H.div
         [ HA.class "scoreboard-container" ]
         [ H.ul
             [ HA.class "scoreboard" ]
-            (List.map (score shipsById) (Dict.values playersById |> List.filter .isConnected))
+            (List.map (score remapMsg shipsById) (Dict.values playersById |> List.filter .isConnected))
         ]
 
 
