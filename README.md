@@ -8,13 +8,6 @@ It works only with gamepads so far, so you will need at least two gamepads.
 See it running [here](https://xarvh.github.io/elm-haifisch/).
 
 
-Gamepad support on browsers is still kind of wild:
-if your gamepads don't work, please [open an issue](https://github.com/xarvh/elm-haifisch/issues): make sure you note
-your OS, browser, gamepad model and the [output from this test page](https://xarvh.github.io/elm-gamepad/).
-Thanks <3
-
-
-
 Goals
 =====
 * Make something that looks nice, it's fun, and it's simple
