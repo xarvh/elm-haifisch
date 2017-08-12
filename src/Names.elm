@@ -4,6 +4,7 @@ import Array
 import Dict
 import LexicalRandom
 import Random as Random
+import String.Extra
 
 
 defaultLexicon =
@@ -135,4 +136,5 @@ ship colorName =
             Dict.insert "color" entry defaultLexicon
     in
         LexicalRandom.generator "---" lexicon "ship"
-            |> Random.map LexicalRandom.capitalize
+            |> Random.map String.Extra.toTitleCase
+
