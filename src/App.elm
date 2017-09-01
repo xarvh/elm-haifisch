@@ -43,10 +43,10 @@ type Msg
 -- init
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Int -> ( Model, Cmd Msg )
+init dateNow =
     ( { input = Input.init
-      , game = Game.init (Random.initialSeed 0)
+      , game = Game.init (Random.initialSeed dateNow)
       , windowSizeInPixels = Window.Size 1 1
       , windowSizeInGameCoordinates = vec2 1 1
       }

@@ -19,6 +19,7 @@ import Time exposing (Time)
 type alias Flags =
     { gamepadDatabaseAsString : String
     , gamepadDatabaseKey : String
+    , dateNow : Int
     }
 
 
@@ -52,7 +53,7 @@ init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
         ( app, appCmd ) =
-            App.init
+            App.init flags.dateNow
 
         gamepadDatabase =
             flags.gamepadDatabaseAsString
