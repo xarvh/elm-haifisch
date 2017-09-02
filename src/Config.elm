@@ -148,7 +148,7 @@ update msg model =
                     | maybeInputConfig =
                         case value of
                             "key" ->
-                                Just Input.Player1UsesKeyboardAndMouse
+                                Just Input.OnePlayerUsesKeyboardAndMouse
 
                             "pad" ->
                                 Just Input.AllPlayersUseGamepads
@@ -178,7 +178,7 @@ viewInputConfig hasKnownGamepads maybeInputConfig =
                 [ text "Guess" ]
             , option
                 [ value "key"
-                , selected <| maybeInputConfig == Just Input.Player1UsesKeyboardAndMouse
+                , selected <| maybeInputConfig == Just Input.OnePlayerUsesKeyboardAndMouse
                 ]
                 [ text "Player 1 uses the keyboard" ]
             , option

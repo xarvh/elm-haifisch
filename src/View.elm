@@ -7,17 +7,16 @@ import Html as H exposing (Html)
 import Html.Events as HE
 import Html.Attributes as HA
 import Game
+import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Random
 import Ship
 import String
 import Svg as S exposing (Svg)
 import Svg.Attributes as SA
 import Time
-import Math.Vector2 as V
 
 
 -- TODO: this module is a mess, needs some reorganisation
--- TODO: use Svg.Lazy?
 -- TODO: scale most things by worldRadius?
 
 
@@ -254,7 +253,7 @@ shipMesh opacity ( bright, dark, _ ) ship =
 ship playersById ship =
     let
         coloration =
-            getColoration playersById ship.controllerId
+            getColoration playersById ship.playerId
     in
         case ship.status of
             Active ->
@@ -330,13 +329,13 @@ ship playersById ship =
 projectile playersById p =
     let
         ( bright, dark, _ ) =
-            getColoration playersById p.ownerControllerId
+            getColoration playersById p.playerId
 
         size =
             0.01 * worldRadius
 
         ( x, y ) =
-            V.toTuple p.position
+            Vec2.toTuple p.position
     in
         S.g
             {- TODO: use linear transforms instead? Run some benchmarks!
@@ -402,12 +401,12 @@ scoreboard remapMsg playersById shipsById =
 viewbox worldSize =
     let
         ( w, h ) =
-            V.toTuple worldSize
+            Vec2.toTuple worldSize
     in
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
-game : Vector -> Dict Int Player -> Game.Model -> Html a
+game : Vec2 -> Dict Int Player -> Game.Model -> Html a
 game worldSize playersById model =
     H.div
         [ HA.class "star-system-container full-window" ]

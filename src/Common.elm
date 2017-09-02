@@ -1,7 +1,12 @@
 module Common exposing (..)
 
-import Math.Vector2 as V
+import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Time exposing (Time)
+
+
+type alias Id =
+    Int
+
 
 
 -- shipLength is used as unit measure
@@ -25,10 +30,16 @@ type alias Coloration =
 
 
 type alias Player =
-    { controllerId : Int
+    { id : Id
     , score : Int
     , coloration : Coloration
-    , isConnected : Bool
+    }
+
+
+type alias InputState =
+    { finalAim : Vec2
+    , fire : Bool
+    , move : Vec2
     }
 
 
@@ -72,11 +83,8 @@ type Status
 
 
 type alias Ship =
-    { controllerId : Int
-    , velocityControl : Vector
-    , headingControl : Vector
-    , fireControl : Bool
-    , position : Vector
+    { playerId : Int
+    , position : Vec2
     , heading : Float
     , status : Status
     , name : String
@@ -87,8 +95,8 @@ type alias Ship =
 
 
 type alias Projectile =
-    { ownerControllerId : Int
-    , position : Vector
+    { playerId : Int
+    , position : Vec2
     , heading : Float
     }
 
@@ -114,47 +122,39 @@ type alias Satellite =
 -- ALGEBRA
 
 
-type alias Vector =
-    V.Vec2
-
-
-vector =
-    V.vec2
-
-
 v0 =
-    V.vec2 0 0
+    vec2 0 0
 
 
-vectorToString : Vector -> String
+vectorToString : Vec2 -> String
 vectorToString v =
-    toString (V.getX v) ++ "," ++ toString (V.getY v)
+    toString (Vec2.getX v) ++ "," ++ toString (Vec2.getY v)
 
 
-clampToRadius : Float -> Vector -> Vector
+clampToRadius : Float -> Vec2 -> Vec2
 clampToRadius radius v =
     let
         ll =
-            V.lengthSquared v
+            Vec2.lengthSquared v
     in
         if ll <= radius * radius then
             v
         else
-            V.scale (radius / sqrt ll) v
+            Vec2.scale (radius / sqrt ll) v
 
 
-vectorToAngle : Vector -> Float
+vectorToAngle : Vec2 -> Float
 vectorToAngle v =
     let
         ( x, y ) =
-            V.toTuple v
+            Vec2.toTuple v
     in
         atan2 y x
 
 
-angleToVector : Float -> Vector
+angleToVector : Float -> Vec2
 angleToVector a =
-    vector (cos a) (sin a)
+    vec2 (cos a) (sin a)
 
 
 normalizeAngle : Float -> Float
@@ -179,20 +179,20 @@ normalizeAngle a =
 --         a - (turnsToRemove * turns 1)
 
 
-rightHandNormal : Vector -> Vector
+rightHandNormal : Vec2 -> Vec2
 rightHandNormal v =
     let
         ( x, y ) =
-            V.toTuple v
+            Vec2.toTuple v
     in
-        vector -y x
+        vec2 -y x
 
 
-rotateVector : Float -> Vector -> Vector
+rotateVector : Float -> Vec2 -> Vec2
 rotateVector angle v =
     let
         ( x, y ) =
-            V.toTuple v
+            Vec2.toTuple v
 
         sinA =
             sin angle
@@ -200,6 +200,6 @@ rotateVector angle v =
         cosA =
             cos angle
     in
-        vector
+        vec2
             (x * cosA - y * sinA)
             (x * sinA + y * cosA)

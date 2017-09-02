@@ -8,6 +8,7 @@
     ],
     "exposed-modules": [],
     "dependencies": {
+        "elm-community/dict-extra": "2.2.0 <= v < 3.0.0",
         "elm-community/linear-algebra": "3.0.0 <= v < 4.0.0",
         "elm-community/list-extra": "6.0.0 <= v < 7.0.0",
         "elm-community/random-extra": "2.0.0 <= v < 3.0.0",

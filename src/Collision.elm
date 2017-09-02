@@ -1,28 +1,26 @@
 module Collision exposing (..)
 
-
 import Array
 import Common exposing (..)
-import Math.Vector2 as V
+import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Ship
 
 
 -- Collision detection
 
 
-
 type alias Polygon =
-    List Vector
+    List Vec2
 
 
-anySegment : (( Vector, Vector ) -> Bool) -> Polygon -> Bool
+anySegment : (( Vec2, Vec2 ) -> Bool) -> Polygon -> Bool
 anySegment f poly =
     let
         a =
             Array.fromList poly
 
         get index =
-            Array.get (index % (Array.length a)) a |> Maybe.withDefault (vector 0 0)
+            Array.get (index % (Array.length a)) a |> Maybe.withDefault (vec2 0 0)
 
         segments =
             List.indexedMap (\index v -> ( get index, get (index + 1) )) poly
@@ -33,10 +31,10 @@ anySegment f poly =
 normalIsSeparatingAxis q ( a, b ) =
     let
         n =
-            rightHandNormal <| V.sub b a
+            rightHandNormal <| Vec2.sub b a
 
         isRightSide p =
-            V.dot n (V.sub p a) > 0
+            Vec2.dot n (Vec2.sub p a) > 0
     in
         List.all isRightSide q
 
@@ -56,12 +54,14 @@ collisionPolygonVsPolygon p q =
 
 
 -- a and b are the old and new positions of the projectile for this frame
-projectileVsShip : Vector -> Vector -> Ship -> Bool
+
+
+projectileVsShip : Vec2 -> Vec2 -> Ship -> Bool
 projectileVsShip a b ship =
     let
         -- get an easy-to-compute circle centered in A that contains B
-        (dx, dy) =
-            V.toTuple <| V.sub a b
+        ( dx, dy ) =
+            Vec2.toTuple <| Vec2.sub a b
 
         radius =
             max (abs dx) (abs dy)
@@ -69,8 +69,7 @@ projectileVsShip a b ship =
         minimumCollisionDistance =
             radius + Ship.radius
     in
-        if V.distanceSquared a ship.position > minimumCollisionDistance * minimumCollisionDistance then
+        if Vec2.distanceSquared a ship.position > minimumCollisionDistance * minimumCollisionDistance then
             False
         else
-            collisionPolygonVsPolygon [a, b] (Ship.transform ship Ship.convexMesh)
-
+            collisionPolygonVsPolygon [ a, b ] (Ship.transform ship Ship.convexMesh)

@@ -5,7 +5,7 @@ import Collision
 import Common exposing (..)
 import Dict exposing (Dict)
 import List.Extra
-import Math.Vector2 as V
+import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Names
 import Planet
 import Ship
@@ -85,10 +85,11 @@ outcomesOverList f oldList =
 
 
 type alias Model =
-    { shipsById : Dict Int Ship
+    { planets : List Planet
+    , players : List Player
     , projectiles : List Projectile
-    , planets : List Planet
     , seed : Random.Seed
+    , shipsById : Dict Int Ship
     }
 
 
@@ -97,10 +98,11 @@ type alias Model =
 
 
 init seed =
-    { shipsById = Dict.empty
+    { planets = Tuple.first <| Random.step Planet.planetsGenerator seed
+    , players = []
     , projectiles = []
     , seed = seed
-    , planets = Tuple.first <| Random.step Planet.planetsGenerator seed
+    , shipsById = Dict.empty
     }
 
 
@@ -109,20 +111,20 @@ init seed =
 
 
 newProjectile ship =
-    { ownerControllerId = ship.controllerId
+    { playerId = ship.playerId
     , position = ship.position
     , heading = ship.heading
     }
 
 
-shipFireControl : Time -> Ship -> ( Ship, List Outcome )
-shipFireControl dt ship =
+shipFireControl : InputState -> Time -> Ship -> ( Ship, List Outcome )
+shipFireControl inputState dt ship =
     let
         ( newReloadTime, deltas ) =
-            if ship.fireControl && ship.reloadTime == 0 then
+            if inputState.fire && ship.reloadTime == 0 then
                 ( Ship.reloadTime
                 , [ D <| AddProjectile (newProjectile ship)
-                  , E <| (ShipFires ship.controllerId)
+                  , E <| (ShipFires ship.playerId)
                   ]
                 )
             else
@@ -134,14 +136,14 @@ shipFireControl dt ship =
         ( newShip, deltas )
 
 
-shipMovementControl : Time -> Ship -> ( Ship, List Outcome )
-shipMovementControl dt ship =
+shipMovementControl : InputState -> Time -> Ship -> ( Ship, List Outcome )
+shipMovementControl inputState dt ship =
     let
         ignoreVelocityControl =
-            V.length ship.velocityControl < velocityControlThreshold
+            Vec2.length inputState.move < velocityControlThreshold
 
         ignoreHeadingControl =
-            V.length ship.headingControl < headingControlThreshold
+            Vec2.length inputState.finalAim < headingControlThreshold
 
         newPosition =
             if ignoreVelocityControl then
@@ -150,10 +152,10 @@ shipMovementControl dt ship =
                 let
                     -- Reduce speed if not moving straight ahead
                     f =
-                        0.85 + 0.15 * cos (vectorToAngle ship.velocityControl - ship.heading)
+                        0.85 + 0.15 * cos (vectorToAngle inputState.move - ship.heading)
                 in
                     ship.position
-                        |> V.add (V.scale (f * Ship.speed * dt) ship.velocityControl)
+                        |> Vec2.add (Vec2.scale (f * Ship.speed * dt) inputState.move)
                         |> clampToRadius worldRadius
 
         targetHeading =
@@ -161,9 +163,9 @@ shipMovementControl dt ship =
                 if ignoreVelocityControl then
                     ship.heading
                 else
-                    vectorToAngle ship.velocityControl
+                    vectorToAngle inputState.move
             else
-                vectorToAngle ship.headingControl
+                vectorToAngle inputState.finalAim
 
         deltaHeading =
             normalizeAngle <| targetHeading - ship.heading
@@ -184,12 +186,9 @@ shipMovementControl dt ship =
 -- Ship factories
 
 
-makeShip controllerId position name =
-    { controllerId = controllerId
-    , velocityControl = v0
-    , headingControl = v0
-    , fireControl = False
-    , heading = vectorToAngle <| V.negate position
+makeShip playerId position name =
+    { playerId = playerId
+    , heading = vectorToAngle <| Vec2.negate position
     , position = position
     , name = name
     , status = Spawning
@@ -199,30 +198,30 @@ makeShip controllerId position name =
     }
 
 
-randomPosition : Random.Generator Vector
+randomPosition : Random.Generator Vec2
 randomPosition =
     Random.map2
-        (\r a -> vector (r * sin a) (r * cos a))
+        (\r a -> vec2 (r * sin a) (r * cos a))
         (Random.float 0 worldRadius)
         (Random.float 0 (turns 1))
 
 
 randomShip : Int -> String -> Random.Generator Ship
-randomShip controllerId colorName =
+randomShip playerId colorName =
     Random.map2
-        (makeShip controllerId)
+        (makeShip playerId)
         randomPosition
         (Names.ship colorName)
 
 
 addShip : Int -> String -> Model -> Model
-addShip controllerId colorName model =
+addShip playerId colorName model =
     let
         ( newShip, newSeed ) =
-            Random.step (randomShip controllerId colorName) model.seed
+            Random.step (randomShip playerId colorName) model.seed
     in
         { model
-            | shipsById = Dict.insert controllerId newShip model.shipsById
+            | shipsById = Dict.insert playerId newShip model.shipsById
             , seed = newSeed
         }
 
@@ -242,7 +241,7 @@ shipSpawnTick dt oldShip =
                 | status = Active
                 , reloadTime = 0
               }
-            , [ E <| ShipActivates oldShip.controllerId
+            , [ E <| ShipActivates oldShip.playerId
               ]
             )
         else
@@ -261,7 +260,7 @@ shipExplodeTick dt oldShip =
     in
         if newExplodeTime >= Ship.explosionDuration then
             ( oldShip
-            , [ D <| RemoveShip oldShip.controllerId ]
+            , [ D <| RemoveShip oldShip.playerId ]
             )
         else
             ( { oldShip | explodeTime = min Ship.explosionDuration newExplodeTime }
@@ -269,22 +268,27 @@ shipExplodeTick dt oldShip =
             )
 
 
-shipTick : Time -> Ship -> ( Ship, List Outcome )
-shipTick dt ship =
-    case ship.status of
-        Spawning ->
-            ship
-                |> shipMovementControl dt
-                |>> shipSpawnTick dt
+shipTick : Dict Id InputState -> Time -> Ship -> ( Ship, List Outcome )
+shipTick inputStateByPlayerId dt ship =
+    case Dict.get ship.playerId inputStateByPlayerId of
+        Nothing ->
+            shipExplodeTick dt ship
 
-        Active ->
-            ship
-                |> shipMovementControl dt
-                |>> shipFireControl dt
+        Just inputState ->
+            case ship.status of
+                Spawning ->
+                    ship
+                        |> shipMovementControl inputState dt
+                        |>> shipSpawnTick dt
 
-        Exploding ->
-            ship
-                |> shipExplodeTick dt
+                Active ->
+                    ship
+                        |> shipMovementControl inputState dt
+                        |>> shipFireControl inputState dt
+
+                Exploding ->
+                    ship
+                        |> shipExplodeTick dt
 
 
 
@@ -295,7 +299,7 @@ projectileTick : Model -> Time -> Projectile -> ( Projectile, List Outcome )
 projectileTick model dt oldProjectile =
     let
         newPosition =
-            V.add oldProjectile.position <| V.scale (projectileSpeed * dt) (angleToVector oldProjectile.heading)
+            Vec2.add oldProjectile.position <| Vec2.scale (projectileSpeed * dt) (angleToVector oldProjectile.heading)
 
         newProjectile =
             { oldProjectile | position = newPosition }
@@ -304,11 +308,11 @@ projectileTick model dt oldProjectile =
             Collision.projectileVsShip oldProjectile.position newProjectile.position ship
 
         collideWithShip id ship deltas =
-            if ship.controllerId /= oldProjectile.ownerControllerId && ship.status == Active && collisionWithShip ship then
+            if ship.playerId /= oldProjectile.playerId && ship.status == Active && collisionWithShip ship then
                 [ D <| RemoveProjectile newProjectile
-                , D <| DamageShip ship.controllerId
-                , E <| ShipExplodes ship.controllerId
-                , E <| ShipDamagesShip oldProjectile.ownerControllerId ship.controllerId
+                , D <| DamageShip ship.playerId
+                , E <| ShipExplodes ship.playerId
+                , E <| ShipDamagesShip oldProjectile.playerId ship.playerId
                 ]
                     ++ deltas
             else
@@ -318,7 +322,7 @@ projectileTick model dt oldProjectile =
             Dict.foldl collideWithShip [] model.shipsById
 
         boundaryEffects =
-            if V.length newPosition > worldRadius then
+            if Vec2.length newPosition > worldRadius then
                 [ D <| RemoveProjectile newProjectile ]
             else
                 []
@@ -348,6 +352,37 @@ planetTick dt planet =
 
 
 
+-- Players
+
+
+addPlayer : Model -> ( Model, Player )
+addPlayer model =
+    let
+        lastId =
+            model.players
+                |> List.map .id
+                |> List.maximum
+                |> Maybe.withDefault 0
+
+        newId =
+            lastId + 1
+
+        player =
+            { id = newId
+            , score = 0
+            , coloration = ( "#f00", "#900", "red" ) -- TODO
+            }
+
+        players =
+            player :: model.players
+
+        newModel =
+            addShip player.id "TODO color name" model
+    in
+        ( { newModel | players = players }, player )
+
+
+
 -- Main state stuff
 
 
@@ -360,16 +395,16 @@ applyDelta effect model =
         RemoveProjectile projectile ->
             { model | projectiles = List.Extra.remove projectile model.projectiles }
 
-        DamageShip controllerId ->
-            case Dict.get controllerId model.shipsById of
+        DamageShip playerId ->
+            case Dict.get playerId model.shipsById of
                 Just ship ->
                     updateShip { ship | status = Exploding } model
 
                 Nothing ->
                     model
 
-        RemoveShip controllerId ->
-            { model | shipsById = Dict.remove controllerId model.shipsById }
+        RemoveShip playerId ->
+            { model | shipsById = Dict.remove playerId model.shipsById }
 
 
 splitOutcomes outcomes =
@@ -385,11 +420,11 @@ splitOutcomes outcomes =
         List.foldl folder ( [], [] ) outcomes
 
 
-tick : Time -> Model -> ( Model, List Event )
-tick dt oldModel =
+tick : Dict Id InputState -> Time -> Model -> ( Model, List Event )
+tick inputStateByPlayerId dt oldModel =
     let
         ( tickedShipsById, shipOutcomes ) =
-            outcomesOverDict (shipTick dt) oldModel.shipsById
+            outcomesOverDict (shipTick inputStateByPlayerId dt) oldModel.shipsById
 
         ( tickedProjectiles, projectileOutcomes ) =
             outcomesOverList (projectileTick oldModel dt) oldModel.projectiles
@@ -417,33 +452,36 @@ tick dt oldModel =
 -- Game Msg
 
 
-type Msg
-    = ControlShip Ship ( Vector, Vector, Bool )
-    | KillShip Ship
-    | AddShip Int String
-    | Tick Time
-
-
 updateShip : Ship -> Model -> Model
 updateShip ship model =
-    { model | shipsById = Dict.insert ship.controllerId ship model.shipsById }
+    { model | shipsById = Dict.insert ship.playerId ship model.shipsById }
 
 
-noEvents m =
-    ( m, [] )
+
+{-
+   type Msg
+       = ControlShip Ship ( Vec2, Vec2, Bool )
+       | KillShip Ship
+       | AddShip Int String
+       | Tick Time
+
+   noEvents m =
+       ( m, [] )
 
 
-update : Msg -> Model -> ( Model, List Event )
-update msg model =
-    case msg of
-        AddShip controllerId colorName ->
-            noEvents <| addShip controllerId colorName model
 
-        ControlShip ship ( velocity, heading, isFiring ) ->
-            noEvents <| updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
+      update : Msg -> Model -> ( Model, List Event )
+      update msg model =
+          case msg of
+              AddShip playerId colorName ->
+                  noEvents <| addShip playerId colorName model
 
-        KillShip ship ->
-            noEvents <| updateShip { ship | status = Exploding } model
+              ControlShip ship ( velocity, heading, isFiring ) ->
+                  noEvents <| updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
 
-        Tick dt ->
-            tick dt model
+              KillShip ship ->
+                  noEvents <| updateShip { ship | status = Exploding } model
+
+              Tick dt ->
+                  tick dt model
+-}

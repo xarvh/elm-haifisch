@@ -1,5 +1,6 @@
 module Input exposing (..)
 
+import Dict exposing (Dict)
 import Gamepad exposing (Gamepad)
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Mouse
@@ -11,21 +12,26 @@ import Time exposing (Time)
 -- types
 
 
+type Source
+    = SourceKeyboardAndMouse
+    | SourceGamepad Int
+
+
+type Config
+    = AllPlayersUseGamepads
+    | OnePlayerUsesKeyboardAndMouse
+
+
 type FinalAim
     = Direction Vec2
     | ScreenPosition Mouse.Position
 
 
-type alias InputState =
+type alias RawInputState =
     { finalAim : FinalAim
     , fire : Bool
     , move : Vec2
     }
-
-
-type Config
-    = AllPlayersUseGamepads
-    | Player1UsesKeyboardAndMouse
 
 
 type Msg
@@ -66,7 +72,7 @@ init =
 -- input to player input state
 
 
-keyboardAndMouseToInputState : Model -> InputState
+keyboardAndMouseToInputState : Model -> RawInputState
 keyboardAndMouseToInputState model =
     let
         pixelsForAFullTurn =
@@ -87,7 +93,7 @@ keyboardAndMouseToInputState model =
         }
 
 
-gamepadToInputState : Gamepad -> InputState
+gamepadToInputState : Gamepad -> RawInputState
 gamepadToInputState gamepad =
     let
         aimDirection =
@@ -109,8 +115,8 @@ gamepadToInputState gamepad =
 -- input assignment
 
 
-inputStates : Maybe Config -> List Gamepad -> Model -> List InputState
-inputStates maybeConfig gamepads model =
+sourcesAndStates : Maybe Config -> List Gamepad -> Model -> List ( Source, RawInputState )
+sourcesAndStates maybeConfig gamepads model =
     let
         config =
             case maybeConfig of
@@ -121,20 +127,21 @@ inputStates maybeConfig gamepads model =
                     if List.length gamepads > 0 then
                         AllPlayersUseGamepads
                     else
-                        Player1UsesKeyboardAndMouse
+                        OnePlayerUsesKeyboardAndMouse
 
         keyboardInputs =
             case config of
                 AllPlayersUseGamepads ->
                     []
 
-                Player1UsesKeyboardAndMouse ->
-                    [ keyboardAndMouseToInputState model ]
+                OnePlayerUsesKeyboardAndMouse ->
+                    [ ( SourceKeyboardAndMouse, keyboardAndMouseToInputState model ) ]
+
+        gamepadToTuple gamepad =
+            ( gamepad |> Gamepad.getIndex |> SourceGamepad, gamepadToInputState gamepad )
 
         gamepadInputs =
-            gamepads
-                |> List.sortBy Gamepad.getIndex
-                |> List.map gamepadToInputState
+            gamepads |> List.map gamepadToTuple
     in
         keyboardInputs ++ gamepadInputs
 
