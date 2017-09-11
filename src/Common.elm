@@ -1,5 +1,6 @@
 module Common exposing (..)
 
+import ColorPattern exposing (ColorPattern)
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Time exposing (Time)
 
@@ -25,14 +26,10 @@ worldRadius =
 -- TYPES
 
 
-type alias Coloration =
-    ( String, String, String )
-
-
 type alias Player =
     { id : Id
     , score : Int
-    , coloration : Coloration
+    , colorPattern : ColorPattern
     }
 
 

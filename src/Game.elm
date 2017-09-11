@@ -1,6 +1,7 @@
 module Game exposing (..)
 
-import Array
+import Array exposing (Array)
+import ColorPattern exposing (ColorPattern)
 import Collision
 import Common exposing (..)
 import Dict exposing (Dict)
@@ -11,6 +12,21 @@ import Planet
 import Ship
 import Time exposing (Time)
 import Random
+import Random.Array
+
+
+-- Main Game Model
+
+
+type alias Model =
+    { planets : List Planet
+    , players : List Player
+    , projectiles : List Projectile
+    , seed : Random.Seed
+    , shipsById : Dict Int Ship
+    , shuffledColorPatterns : Array ColorPattern
+    }
+
 
 
 -- Global constants
@@ -81,19 +97,6 @@ outcomesOverList f oldList =
 
 
 
--- Main Game Model
-
-
-type alias Model =
-    { planets : List Planet
-    , players : List Player
-    , projectiles : List Projectile
-    , seed : Random.Seed
-    , shipsById : Dict Int Ship
-    }
-
-
-
 -- Init
 
 
@@ -103,6 +106,7 @@ init seed =
     , projectiles = []
     , seed = seed
     , shipsById = Dict.empty
+    , shuffledColorPatterns = Random.step (Random.Array.shuffle ColorPattern.patterns) seed |> Tuple.first
     }
 
 
@@ -207,18 +211,18 @@ randomPosition =
 
 
 randomShip : Int -> String -> Random.Generator Ship
-randomShip playerId colorName =
+randomShip playerId colorKey =
     Random.map2
         (makeShip playerId)
         randomPosition
-        (Names.ship colorName)
+        (Names.ship colorKey)
 
 
 addShip : Int -> String -> Model -> Model
-addShip playerId colorName model =
+addShip playerId colorKey model =
     let
         ( newShip, newSeed ) =
-            Random.step (randomShip playerId colorName) model.seed
+            Random.step (randomShip playerId colorKey) model.seed
     in
         { model
             | shipsById = Dict.insert playerId newShip model.shipsById
@@ -370,14 +374,14 @@ addPlayer model =
         player =
             { id = newId
             , score = 0
-            , coloration = ( "#f00", "#900", "red" ) -- TODO
+            , colorPattern = ColorPattern.get newId model.shuffledColorPatterns
             }
 
         players =
             player :: model.players
 
         newModel =
-            addShip player.id "TODO color name" model
+            addShip player.id player.colorPattern.key model
     in
         ( { newModel | players = players }, player )
 

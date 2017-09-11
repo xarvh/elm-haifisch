@@ -1,6 +1,7 @@
 module View exposing (..)
 
 import Array exposing (Array)
+import ColorPattern exposing (ColorPattern)
 import Common exposing (..)
 import Dict exposing (Dict)
 import Html as H exposing (Html)
@@ -16,10 +17,6 @@ import Svg.Attributes as SA
 import Time
 
 
--- TODO: this module is a mess, needs some reorganisation
--- TODO: scale most things by worldRadius?
-
-
 worldRadius =
     Game.worldRadius
 
@@ -32,27 +29,8 @@ shipStrokWidth =
     0.005 * worldRadius
 
 
-
--- Player coloration
-
-
-colorations : Array Coloration
-colorations =
-    Array.fromList
-        -- bright, dark
-        [ ( "#f00", "#900", "red" )
-        , ( "#0f0", "#090", "green" )
-        , ( "#00f", "#009", "blue" )
-        , ( "#0ee", "#0bb", "cyan" )
-        , ( "#f0f", "#909", "purple" )
-        , ( "#ee0", "#bb0", "yellow" )
-        ]
-
-
-getColoration playersById id =
-    Dict.get id playersById
-        |> Maybe.map .coloration
-        |> Maybe.withDefault ( "", "", "" )
+type alias PlayersById =
+    Dict Id Player
 
 
 
@@ -221,10 +199,10 @@ outerWellMarker =
 
 
 -- SHIPS
--- shipMesh : Float -> Int -> Ship -> Svg a
 
 
-shipMesh opacity ( bright, dark, _ ) ship =
+shipMesh : Float -> ColorPattern -> Ship -> Svg msg
+shipMesh opacity colorPattern ship =
     let
         vertices =
             Ship.transform ship Ship.mesh
@@ -237,8 +215,8 @@ shipMesh opacity ( bright, dark, _ ) ship =
             [ SA.d path
             , SA.style <|
                 String.join "; " <|
-                    [ "fill: " ++ dark
-                    , "stroke: " ++ bright
+                    [ "fill: " ++ colorPattern.dark
+                    , "stroke: " ++ colorPattern.bright
                     , "stroke-width: " ++ toString shipStrokWidth
                     , "opacity: " ++ toString opacity
                     ]
@@ -246,18 +224,17 @@ shipMesh opacity ( bright, dark, _ ) ship =
             []
 
 
-
--- ship : Int -> Ship -> Svg a
-
-
+ship : PlayersById -> Ship -> Svg msg
 ship playersById ship =
     let
-        coloration =
-            getColoration playersById ship.playerId
+        colorPattern =
+            Dict.get ship.playerId playersById
+                |> Maybe.map .colorPattern
+                |> Maybe.withDefault ColorPattern.neutral
     in
         case ship.status of
             Active ->
-                shipMesh 1.0 coloration ship
+                shipMesh 1.0 colorPattern ship
 
             Spawning ->
                 let
@@ -276,7 +253,7 @@ ship playersById ship =
                     opacity =
                         (1 + sin angularPhase) / 2
                 in
-                    shipMesh opacity coloration ship
+                    shipMesh opacity colorPattern ship
 
             Exploding ->
                 let
@@ -290,9 +267,6 @@ ship playersById ship =
                     -- max explosion size
                     r =
                         0.1 * worldRadius
-
-                    ( bright, dark, _ ) =
-                        coloration
 
                     particleByIndex index =
                         let
@@ -310,8 +284,8 @@ ship playersById ship =
                                 , SA.cy <| toString y
                                 , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
                                 , SA.opacity <| toString <| (1 - t) / 3
-                                , SA.fill dark
-                                , SA.stroke bright
+                                , SA.fill colorPattern.dark
+                                , SA.stroke colorPattern.bright
                                 , SA.strokeWidth <| toString <| shipStrokWidth * 2
                                 ]
                                 []
@@ -326,44 +300,40 @@ ship playersById ship =
 -- Projectiles
 
 
-projectile playersById p =
+projectile : PlayersById -> Projectile -> Svg msg
+projectile playersById projectile =
     let
-        ( bright, dark, _ ) =
-            getColoration playersById p.playerId
+        colorPattern =
+            Dict.get projectile.playerId playersById
+                |> Maybe.map .colorPattern
+                |> Maybe.withDefault ColorPattern.neutral
 
         size =
             0.01 * worldRadius
 
         ( x, y ) =
-            Vec2.toTuple p.position
+            Vec2.toTuple projectile.position
     in
         S.g
-            {- TODO: use linear transforms instead? Run some benchmarks!
-               [ SA.transform <|
-                   String.join " " <|
-                       [ "translate(" ++ vectorToString p.position ++ ")"
-                       , "scale(" ++ toString size ++ ")"
-                       ]
-               ]
-            -}
             []
             [ S.circle
                 [ SA.cx <| toString <| x
                 , SA.cy <| toString <| y
                 , SA.r <| toString <| 0.01 * worldRadius
-                , SA.fill bright
-                , SA.stroke dark
+                , SA.fill colorPattern.bright
+                , SA.stroke colorPattern.dark
                 , SA.strokeWidth <| toString <| 0.001 * worldRadius
                 ]
                 []
             ]
 
 
+
+-- HUD
+
+
 score remapMsg shipsById player =
     let
-        ( bright, dark, _ ) =
-            player.coloration
-
         name =
             case Dict.get player.controllerId shipsById of
                 Just ship ->
@@ -378,10 +348,10 @@ score remapMsg shipsById player =
         H.li
             []
             [ H.p
-                [ HA.class "name", color bright ]
+                [ HA.class "name", color player.colorPattern.bright ]
                 [ H.text name ]
             , H.p
-                [ HA.class "score", color bright ]
+                [ HA.class "score", color player.colorPattern.bright ]
                 [ H.text <| toString player.score ]
             , H.button
                 [ HE.onClick (remapMsg player.controllerId) ]
@@ -406,9 +376,19 @@ viewbox worldSize =
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
-game : Vec2 -> Dict Int Player -> Game.Model -> Html a
-game worldSize playersById model =
+
+-- Main
+
+
+game : Vec2 -> Game.Model -> Html a
+game worldSize model =
     let
+        playerIds =
+            model.players |> List.map .id
+
+        playersById =
+            List.map2 (,) playerIds model.players |> Dict.fromList
+
         entities =
             [ [ star
               , outerWellMarker
@@ -424,7 +404,7 @@ game worldSize playersById model =
                 [ SA.viewBox (viewbox worldSize)
                 ]
                 [ S.g
-                    [ SA.transform "scale(1, -1)"]
+                    [ SA.transform "scale(1, -1)" ]
                     (List.concat entities)
                 ]
             ]

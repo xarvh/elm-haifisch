@@ -251,7 +251,7 @@ view : Model -> Html Msg
 view model =
     div
         []
-        [ View.game model.windowSizeInGameCoordinates Dict.empty model.game
+        [ View.game model.windowSizeInGameCoordinates model.game
         ]
 
 
