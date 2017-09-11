@@ -28,6 +28,7 @@ worldRadius =
 
 type alias Player =
     { id : Id
+    , isConnected : Bool
     , score : Int
     , colorPattern : ColorPattern
     }
@@ -46,6 +47,7 @@ type alias InputState =
 
 type Delta
     = AddProjectile Projectile
+    | CreateShip Player
     | RemoveProjectile Projectile
     | DamageShip Int
     | RemoveShip Int
@@ -80,7 +82,8 @@ type Status
 
 
 type alias Ship =
-    { playerId : Int
+    { id : Id
+    , playerId : Id
     , position : Vec2
     , heading : Float
     , status : Status

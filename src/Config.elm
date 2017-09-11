@@ -180,7 +180,7 @@ viewInputConfig hasKnownGamepads maybeInputConfig =
                 [ value "key"
                 , selected <| maybeInputConfig == Just Input.OnePlayerUsesKeyboardAndMouse
                 ]
-                [ text "Player 1 uses the keyboard" ]
+                [ text "A player uses the keyboard" ]
             , option
                 [ value "pad"
                 , selected <| maybeInputConfig == Just Input.AllPlayersUseGamepads

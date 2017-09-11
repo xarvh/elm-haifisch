@@ -37,9 +37,15 @@ score shipsById player =
 
 scoreboard : List Player -> Dict Id Ship -> Html msg
 scoreboard players shipsById =
-    div
-        [ class "scoreboard-container" ]
-        [ ul
-            [ class "scoreboard" ]
-            (List.map (score shipsById) players)
-        ]
+    let
+        visiblePlayers =
+            players
+                |> List.filter .isConnected
+                |> List.sortBy .id
+    in
+        div
+            [ class "scoreboard-container" ]
+            [ ul
+                [ class "scoreboard" ]
+                (List.map (score shipsById) visiblePlayers)
+            ]

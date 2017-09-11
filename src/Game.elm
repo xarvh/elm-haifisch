@@ -1,10 +1,11 @@
-module Game exposing (..)
+module Game exposing (Model, init, tick, worldRadius, addPlayer)
 
 import Array exposing (Array)
 import ColorPattern exposing (ColorPattern)
 import Collision
 import Common exposing (..)
 import Dict exposing (Dict)
+import Dict.Extra
 import List.Extra
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Names
@@ -191,7 +192,8 @@ shipMovementControl inputState dt ship =
 
 
 makeShip playerId position name =
-    { playerId = playerId
+    { id = playerId
+    , playerId = playerId
     , heading = vectorToAngle <| Vec2.negate position
     , position = position
     , name = name
@@ -218,14 +220,15 @@ randomShip playerId colorKey =
         (Names.ship colorKey)
 
 
-addShip : Int -> String -> Model -> Model
-addShip playerId colorKey model =
+addShip : Player -> Model -> Model
+addShip player model =
     let
         ( newShip, newSeed ) =
-            Random.step (randomShip playerId colorKey) model.seed
+            Random.step (randomShip player.id player.colorPattern.key) model.seed
     in
         { model
-            | shipsById = Dict.insert playerId newShip model.shipsById
+          -- TODO: do not recycle player ids
+            | shipsById = Dict.insert player.id newShip model.shipsById
             , seed = newSeed
         }
 
@@ -264,7 +267,7 @@ shipExplodeTick dt oldShip =
     in
         if newExplodeTime >= Ship.explosionDuration then
             ( oldShip
-            , [ D <| RemoveShip oldShip.playerId ]
+            , [ D <| RemoveShip oldShip.id ]
             )
         else
             ( { oldShip | explodeTime = min Ship.explosionDuration newExplodeTime }
@@ -359,6 +362,31 @@ planetTick dt planet =
 -- Players
 
 
+playerTick : Model -> Dict Id InputState -> Player -> ( Player, List Outcome )
+playerTick model inputStateByPlayerId player =
+    let
+        isConnected =
+            Dict.member player.id inputStateByPlayerId
+
+        maybeShip =
+            model.shipsById
+                |> Dict.Extra.find (\id ship -> ship.playerId == player.id)
+                |> Maybe.map Tuple.second
+
+        events =
+            case ( isConnected, maybeShip ) of
+                ( False, Just ship ) ->
+                    [ D <| RemoveShip ship.id ]
+
+                ( True, Nothing ) ->
+                    [ D <| CreateShip player ]
+
+                _ ->
+                    []
+    in
+        ( { player | isConnected = isConnected }, events )
+
+
 addPlayer : Model -> ( Model, Player )
 addPlayer model =
     let
@@ -373,17 +401,15 @@ addPlayer model =
 
         player =
             { id = newId
+            , isConnected = True
             , score = 0
             , colorPattern = ColorPattern.get newId model.shuffledColorPatterns
             }
 
         players =
             player :: model.players
-
-        newModel =
-            addShip player.id player.colorPattern.key model
     in
-        ( { newModel | players = players }, player )
+        ( { model | players = players }, player )
 
 
 
@@ -401,6 +427,9 @@ applyDelta effect model =
         AddProjectile projectile ->
             { model | projectiles = projectile :: model.projectiles }
 
+        CreateShip player ->
+            addShip player model
+
         RemoveProjectile projectile ->
             { model | projectiles = List.Extra.remove projectile model.projectiles }
 
@@ -412,8 +441,8 @@ applyDelta effect model =
                 Nothing ->
                     model
 
-        RemoveShip playerId ->
-            { model | shipsById = Dict.remove playerId model.shipsById }
+        RemoveShip shipId ->
+            { model | shipsById = Dict.remove shipId model.shipsById }
 
 
 splitOutcomes outcomes =
@@ -438,6 +467,9 @@ tick inputStateByPlayerId dt oldModel =
         ( tickedProjectiles, projectileOutcomes ) =
             outcomesOverList (projectileTick oldModel dt) oldModel.projectiles
 
+        ( tickedPlayers, playersOutcomes ) =
+            outcomesOverList (playerTick oldModel inputStateByPlayerId) oldModel.players
+
         tickedPlanets =
             List.map (planetTick dt) oldModel.planets
 
@@ -446,10 +478,11 @@ tick inputStateByPlayerId dt oldModel =
                 | shipsById = tickedShipsById
                 , projectiles = tickedProjectiles
                 , planets = tickedPlanets
+                , players = tickedPlayers
             }
 
         ( deltas, events ) =
-            splitOutcomes <| shipOutcomes ++ projectileOutcomes
+            splitOutcomes <| shipOutcomes ++ projectileOutcomes ++ playersOutcomes
 
         newModel =
             List.foldl applyDelta tickedModel deltas
