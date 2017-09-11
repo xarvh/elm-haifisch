@@ -110,8 +110,11 @@ getPlayerMouseAim model inputSource mousePositionInWindowCoordinates =
 
                     mouseGameY =
                         gameH * (pixelH / 2 - mousePixelY - 1) / pixelH
+
+                    mouseGamePos =
+                        vec2 mouseGameX mouseGameY
                 in
-                    Vec2.sub (vec2 mouseGameX mouseGameY) ship.position |> Vec2.normalize
+                    Vec2.sub mouseGamePos ship.position |> Vec2.normalize
 
 
 resolveMouseAim : Model -> Input.Source -> Input.RawInputState -> InputState

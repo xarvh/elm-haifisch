@@ -139,7 +139,7 @@ planet p =
             p.orbitRadius * cos p.angle
 
         y =
-            p.orbitRadius * sin p.angle
+            p.orbitRadius * -1 * sin p.angle
 
         transform =
             "translate(" ++ toString x ++ ", " ++ toString y ++ ")"
@@ -408,16 +408,23 @@ viewbox worldSize =
 
 game : Vec2 -> Dict Int Player -> Game.Model -> Html a
 game worldSize playersById model =
-    H.div
-        [ HA.class "star-system-container full-window" ]
-        [ S.svg
-            [ SA.viewBox (viewbox worldSize)
+    let
+        entities =
+            [ [ star
+              , outerWellMarker
+              ]
+            , List.map planet model.planets
+            , List.map (ship playersById) (Dict.values model.shipsById)
+            , List.map (projectile playersById) model.projectiles
             ]
-          <|
-            [ star
-            , outerWellMarker
+    in
+        H.div
+            [ HA.class "star-system-container full-window" ]
+            [ S.svg
+                [ SA.viewBox (viewbox worldSize)
+                ]
+                [ S.g
+                    [ SA.transform "scale(1, -1)"]
+                    (List.concat entities)
+                ]
             ]
-                ++ (List.map planet model.planets)
-                ++ (List.map (ship playersById) (Dict.values model.shipsById))
-                ++ (List.map (projectile playersById) model.projectiles)
-        ]
