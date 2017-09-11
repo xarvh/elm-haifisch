@@ -287,46 +287,6 @@ projectile playersById projectile =
             ]
 
 
-
--- HUD
-
-
-score remapMsg shipsById player =
-    let
-        name =
-            case Dict.get player.controllerId shipsById of
-                Just ship ->
-                    ship.name
-
-                Nothing ->
-                    "-"
-
-        color c =
-            HA.style [ ( "color", c ) ]
-    in
-        H.li
-            []
-            [ H.p
-                [ HA.class "name", color player.colorPattern.bright ]
-                [ H.text name ]
-            , H.p
-                [ HA.class "score", color player.colorPattern.bright ]
-                [ H.text <| toString player.score ]
-            , H.button
-                [ HE.onClick (remapMsg player.controllerId) ]
-                [ H.text "Remap" ]
-            ]
-
-
-scoreboard remapMsg playersById shipsById =
-    H.div
-        [ HA.class "scoreboard-container" ]
-        [ H.ul
-            [ HA.class "scoreboard" ]
-            (List.map (score remapMsg shipsById) (Dict.values playersById |> List.filter .isConnected))
-        ]
-
-
 viewbox worldSize =
     let
         ( w, h ) =

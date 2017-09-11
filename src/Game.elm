@@ -390,6 +390,11 @@ addPlayer model =
 -- Main state stuff
 
 
+updateShip : Ship -> Model -> Model
+updateShip ship model =
+    { model | shipsById = Dict.insert ship.playerId ship model.shipsById }
+
+
 applyDelta : Delta -> Model -> Model
 applyDelta effect model =
     case effect of
@@ -450,42 +455,3 @@ tick inputStateByPlayerId dt oldModel =
             List.foldl applyDelta tickedModel deltas
     in
         ( newModel, events )
-
-
-
--- Game Msg
-
-
-updateShip : Ship -> Model -> Model
-updateShip ship model =
-    { model | shipsById = Dict.insert ship.playerId ship model.shipsById }
-
-
-
-{-
-   type Msg
-       = ControlShip Ship ( Vec2, Vec2, Bool )
-       | KillShip Ship
-       | AddShip Int String
-       | Tick Time
-
-   noEvents m =
-       ( m, [] )
-
-
-
-      update : Msg -> Model -> ( Model, List Event )
-      update msg model =
-          case msg of
-              AddShip playerId colorName ->
-                  noEvents <| addShip playerId colorName model
-
-              ControlShip ship ( velocity, heading, isFiring ) ->
-                  noEvents <| updateShip { ship | velocityControl = velocity, headingControl = heading, fireControl = isFiring } model
-
-              KillShip ship ->
-                  noEvents <| updateShip { ship | status = Exploding } model
-
-              Tick dt ->
-                  tick dt model
--}

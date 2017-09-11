@@ -14,10 +14,12 @@ import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Mouse
 import MousePort
 import Random
+import SoundPort
 import Task
 import Time exposing (Time)
 import View
 import View.Background
+import View.Scoreboard
 import Window
 
 
@@ -216,6 +218,25 @@ resizeWindow sizeInPixels model =
         }
 
 
+eventToCmd : Common.Event -> Cmd msg
+eventToCmd event =
+    case event of
+        Common.ShipExplodes _ ->
+            SoundPort.playSound "explosion"
+
+        Common.ShipFires _ ->
+            SoundPort.playSound "fire"
+
+        Common.ShipActivates _ ->
+            SoundPort.playSound "spawnEnd"
+
+        Common.ShipAppears _ ->
+            Cmd.none
+
+        Common.ShipDamagesShip _ _ ->
+            Cmd.none
+
+
 updateAnimationFrame : Config -> Time -> Gamepad.Blob -> Model -> ( Model, Cmd Msg )
 updateAnimationFrame config dt blob oldModel =
     let
@@ -224,15 +245,17 @@ updateAnimationFrame config dt blob oldModel =
 
         ( game, events ) =
             Game.tick inputStatesByPlayerId dt model.game
+
+        cmds =
+            List.map eventToCmd events
     in
-        noCmd { model | game = game }
+        ( { model | game = game }, Cmd.batch cmds )
 
 
 update : Config -> Msg -> Model -> ( Model, Cmd Msg )
 update config msg model =
     case msg of
         OnAnimationFrame ( dt, blob ) ->
-            -- TODO: remove msg, use function directly
             updateAnimationFrame config dt blob model
 
         OnInputMsg msg ->
@@ -254,6 +277,7 @@ view model =
         []
         [ View.Background.view
         , View.game model.windowSizeInGameCoordinates model.game
+        , View.Scoreboard.scoreboard model.game.players model.game.shipsById
         ]
 
 
