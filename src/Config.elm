@@ -193,17 +193,17 @@ viewInputConfig hasKnownGamepads maybeInputConfig =
 viewConfig : Model -> Html Msg
 viewConfig model =
     div
-        [ class "configModal-Container" ]
+        [ class "ConfigModal-Container" ]
         [ div
-            [ class "configModal-Content" ]
+            [ class "ConfigModal-Content" ]
             [ div
-                [ class "configModal-Item" ]
+                [ class "ConfigModal-Item" ]
                 [ text "Press Esc to to toggle Menu" ]
             , div
-                [ class "configModal-Item" ]
+                [ class "ConfigModal-Item" ]
                 [ viewInputConfig model.hasKnownGamepads model.maybeInputConfig ]
             , div
-                [ class "configModal-Item" ]
+                [ class "ConfigModal-Item" ]
                 [ button
                     [ disabled <| not model.hasGamepads ]
                     [ text "Remap gamepads (not implemented yet)" ]

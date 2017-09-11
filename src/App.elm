@@ -17,6 +17,7 @@ import Random
 import Task
 import Time exposing (Time)
 import View
+import View.Background
 import Window
 
 
@@ -251,7 +252,8 @@ view : Model -> Html Msg
 view model =
     div
         []
-        [ View.game model.windowSizeInGameCoordinates model.game
+        [ View.Background.view
+        , View.game model.windowSizeInGameCoordinates model.game
         ]
 
 
