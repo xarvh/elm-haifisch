@@ -144,8 +144,17 @@ shipFireControl inputState dt ship =
 shipMovementControl : InputState -> Time -> Ship -> ( Ship, List Outcome )
 shipMovementControl inputState dt ship =
     let
+        moveLength =
+            Vec2.length inputState.move
+
+        move =
+            if moveLength > 1 then
+                Vec2.scale (1 / moveLength) inputState.move
+            else
+                inputState.move
+
         ignoreVelocityControl =
-            Vec2.length inputState.move < velocityControlThreshold
+            moveLength < velocityControlThreshold
 
         ignoreHeadingControl =
             Vec2.length inputState.finalAim < headingControlThreshold
@@ -157,10 +166,10 @@ shipMovementControl inputState dt ship =
                 let
                     -- Reduce speed if not moving straight ahead
                     f =
-                        0.85 + 0.15 * cos (vectorToAngle inputState.move - ship.heading)
+                        0.85 + 0.15 * cos (vectorToAngle move - ship.heading)
                 in
                     ship.position
-                        |> Vec2.add (Vec2.scale (f * Ship.speed * dt) inputState.move)
+                        |> Vec2.add (Vec2.scale (f * Ship.speed * dt) move)
                         |> clampToRadius worldRadius
 
         targetHeading =
@@ -168,7 +177,7 @@ shipMovementControl inputState dt ship =
                 if ignoreVelocityControl then
                     ship.heading
                 else
-                    vectorToAngle inputState.move
+                    vectorToAngle move
             else
                 vectorToAngle inputState.finalAim
 

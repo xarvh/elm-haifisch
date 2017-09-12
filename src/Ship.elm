@@ -13,7 +13,7 @@ length =
 
 
 speed =
-    5 * length / Time.second
+    7 * length / Time.second
 
 
 turningRate =
