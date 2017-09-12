@@ -97,7 +97,7 @@ gamepadToInputState : Gamepad -> RawInputState
 gamepadToInputState gamepad =
     let
         aimDirection =
-            vec2 (Gamepad.rightX gamepad) -(Gamepad.rightY gamepad) |> Vec2.normalize
+            vec2 (Gamepad.rightX gamepad) (Gamepad.rightY gamepad)
 
         fire =
             Gamepad.aIsPressed gamepad
