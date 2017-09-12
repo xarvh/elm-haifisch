@@ -1,38 +1,29 @@
 body {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
-
-.splash-container {
-    position: absolute;
-}
-
-.splash {
-    position: relative;
-    top: 20%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-
-    border: 2px solid #eee;
-    background-color: rgba(255, 255, 255, 0.3);
-    width: 400px;
-    color: #029993;
-    text-align: center;
-}
-
-.splash-content {
+.ConfigModal-Container {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-.splash-button {
-  margin-top: 15px;
-  margin-bottom: 15px;
+.ConfigModal-Content {
+  background-color: white;
+  border: 1px solid grey;
+  padding: 16px;
 }
+
+.ConfigModal-Item + .ConfigModal-Item {
+  margin-top: 16px;
+}
+
 
 .remap-target-name {
   font-size: 2rem;
@@ -59,7 +50,6 @@ body {
     font-weight: bold;
     padding: 5px 10px;
     margin-bottom: 10px;
-    text-align: right;
     background-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -75,13 +65,6 @@ body {
 }
 
 
-
-
-
-.ui {
-    background: black;
-}
-
 .full-window {
     width: 100vw;
     height: 100vh;
@@ -90,13 +73,9 @@ body {
 }
 
 
-.ui-background {
-}
-
-
 .star-system-container {
+  cursor: crosshair;
 }
-
 
 
 .info-box {

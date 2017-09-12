@@ -1,7 +1,7 @@
 module Ship exposing (..)
 
 import Common exposing (..)
-import Math.Vector2 as V
+import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Time exposing (Time)
 
 
@@ -13,7 +13,7 @@ length =
 
 
 speed =
-    5 * length / Time.second
+    7 * length / Time.second
 
 
 turningRate =
@@ -44,7 +44,7 @@ spawnDuration =
 
 mesh =
     List.map
-        (V.fromTuple >> V.scale (length / 15))
+        (Vec2.fromTuple >> Vec2.scale (length / 15))
         [ ( -3, 0 )
         , ( -5, 5 )
         , ( 10, 0 )
@@ -62,7 +62,7 @@ convexMesh =
 
 radius =
     convexMesh
-        |> List.map V.length
+        |> List.map Vec2.length
         |> List.maximum
         |> Maybe.withDefault 0
 
@@ -71,6 +71,6 @@ radius =
 -- HELPERS
 
 
-transform : Ship -> List Vector -> List Vector
+transform : Ship -> List Vec2 -> List Vec2
 transform ship polygon =
-    List.map (rotateVector ship.heading >> V.add ship.position) polygon
+    List.map (rotateVector ship.heading >> Vec2.add ship.position) polygon
