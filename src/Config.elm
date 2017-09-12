@@ -10,6 +10,7 @@ import Json.Decode
 import Keyboard
 import MousePort
 import Input
+import Config.Remap
 import Time exposing (Time)
 
 
@@ -25,6 +26,7 @@ type alias Flags =
 
 type ConfigModal
     = Main
+    | Remapping Config.Remap.Model
 
 
 type alias Model =
@@ -43,6 +45,8 @@ type Msg
     | OnGamepad ( Time, Gamepad.Blob )
     | OnKey Int
     | OnInputConfig String
+    | OnRemapButton
+    | OnRemapMsg Config.Remap.Msg
 
 
 
@@ -88,16 +92,15 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         OnAppMsg appMsg ->
-            let
-                ( appModel, appCmd ) =
-                    App.update
-                        { maybeInputConfig = model.maybeInputConfig
-                        , gamepadDatabase = model.gamepadDatabase
-                        }
-                        appMsg
-                        model.app
-            in
-                ( { model | app = appModel }, Cmd.map OnAppMsg appCmd )
+            App.update
+                (model.maybeModal /= Nothing)
+                { maybeInputConfig = model.maybeInputConfig
+                , gamepadDatabase = model.gamepadDatabase
+                }
+                appMsg
+                model.app
+                |> Tuple.mapFirst (\app -> { model | app = app })
+                |> Tuple.mapSecond (Cmd.map OnAppMsg)
 
         OnGamepad ( dt, blob ) ->
             let
@@ -110,15 +113,8 @@ update msg model =
                     blob
                         |> Gamepad.getAllGamepadsAsUnknown
                         |> List.length
-
-                -- Stop app time updates when the modal is open
-                appUpdate =
-                    if model.maybeModal == Nothing then
-                        ( dt, blob ) |> App.OnAnimationFrame |> OnAppMsg |> update
-                    else
-                        noCmd
             in
-                appUpdate
+                noCmd
                     { model
                         | hasGamepads = allGamepads > 0
                         , hasKnownGamepads = knownGamepads > 0
@@ -157,6 +153,22 @@ update msg model =
                                 Nothing
                 }
 
+        OnRemapButton ->
+            Config.Remap.init
+                |> Tuple.mapFirst (\remapModel -> { model | maybeModal = Just <| Remapping remapModel })
+                |> Tuple.mapSecond (Cmd.map OnRemapMsg)
+
+        OnRemapMsg nestedMsg ->
+            case model.maybeModal of
+                Just (Remapping remapModel) ->
+                    remapModel
+                        |> Config.Remap.update nestedMsg
+                        |> Tuple.mapFirst (\remapModel -> { model | maybeModal = Just <| Remapping remapModel })
+                        |> Tuple.mapSecond (Cmd.map OnRemapMsg)
+
+                _ ->
+                    noCmd model
+
 
 
 -- view
@@ -193,21 +205,20 @@ viewInputConfig hasKnownGamepads maybeInputConfig =
 viewConfig : Model -> Html Msg
 viewConfig model =
     div
-        [ class "ConfigModal-Container" ]
+        []
         [ div
-            [ class "ConfigModal-Content" ]
-            [ div
-                [ class "ConfigModal-Item" ]
-                [ text "Press Esc to to toggle Menu" ]
-            , div
-                [ class "ConfigModal-Item" ]
-                [ viewInputConfig model.hasKnownGamepads model.maybeInputConfig ]
-            , div
-                [ class "ConfigModal-Item" ]
-                [ button
-                    [ disabled <| not model.hasGamepads ]
-                    [ text "Remap gamepads (not implemented yet)" ]
+            [ class "ConfigModal-Item" ]
+            [ text "Press Esc to to toggle Menu" ]
+        , div
+            [ class "ConfigModal-Item" ]
+            [ viewInputConfig model.hasKnownGamepads model.maybeInputConfig ]
+        , div
+            [ class "ConfigModal-Item" ]
+            [ button
+                [ disabled <| not model.hasGamepads
+                , Html.Events.onClick OnRemapButton
                 ]
+                [ text "Remap gamepads" ]
             ]
         ]
 
@@ -221,8 +232,19 @@ view model =
             Nothing ->
                 text ""
 
-            Just Main ->
-                viewConfig model
+            Just configModel ->
+                div
+                    [ class "ConfigModal-Container" ]
+                    [ div
+                        [ class "ConfigModal-Content" ]
+                        [ case configModel of
+                            Main ->
+                                viewConfig model
+
+                            Remapping remapModel ->
+                                Config.Remap.view remapModel |> Html.map OnRemapMsg
+                        ]
+                    ]
         ]
 
 
@@ -234,7 +256,10 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Keyboard.ups OnKey
-        , GamepadPort.gamepad OnGamepad
+        , if model.maybeModal == Just Main then
+            GamepadPort.gamepad OnGamepad
+          else
+            Sub.none
         , App.subscriptions model.app |> Sub.map OnAppMsg
         ]
 

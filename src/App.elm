@@ -252,11 +252,14 @@ updateAnimationFrame config dt blob oldModel =
         ( { model | game = game }, Cmd.batch cmds )
 
 
-update : Config -> Msg -> Model -> ( Model, Cmd Msg )
-update config msg model =
+update : Bool -> Config -> Msg -> Model -> ( Model, Cmd Msg )
+update isPaused config msg model =
     case msg of
         OnAnimationFrame ( dt, blob ) ->
-            updateAnimationFrame config dt blob model
+            if isPaused then
+                noCmd model
+            else
+                updateAnimationFrame config dt blob model
 
         OnInputMsg msg ->
             { model | input = Input.update msg model.input } |> noCmd
@@ -290,4 +293,5 @@ subscriptions model =
     Sub.batch
         [ Window.resizes OnWindowResizes
         , Input.subscriptions model.input |> Sub.map OnInputMsg
+        , GamepadPort.gamepad OnAnimationFrame
         ]
