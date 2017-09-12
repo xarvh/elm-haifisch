@@ -1,16 +1,17 @@
 module Config exposing (..)
 
 import App
-import Gamepad
+import Gamepad exposing (Gamepad, Destination(..))
+import Gamepad.Remap
 import GamepadPort
 import Html exposing (..)
 import Html.Attributes exposing (class, disabled, selected, value)
 import Html.Events
 import Json.Decode
 import Keyboard
+import LocalStoragePort
 import MousePort
 import Input
-import Config.Remap
 import Time exposing (Time)
 
 
@@ -26,7 +27,8 @@ type alias Flags =
 
 type ConfigModal
     = Main
-    | Remapping Config.Remap.Model
+    | Message String
+    | Remapping (Gamepad.Remap.Model String)
 
 
 type alias Model =
@@ -46,7 +48,25 @@ type Msg
     | OnKey Int
     | OnInputConfig String
     | OnRemapButton
-    | OnRemapMsg Config.Remap.Msg
+    | OnRemapMsg Gamepad.Remap.Msg
+
+
+
+-- Remap targets
+
+
+gamepadControls =
+    [ ( A, "Fire" )
+    , ( B, "Fire (different button)" )
+    , ( LeftLeft, "Move left" )
+    , ( LeftRight, "Move right" )
+    , ( LeftUp, "Move up" )
+    , ( LeftDown, "Move down" )
+    , ( RightLeft, "Aim left" )
+    , ( RightRight, "Aim right" )
+    , ( RightUp, "Aim up" )
+    , ( RightDown, "Aim down" )
+    ]
 
 
 
@@ -86,6 +106,34 @@ init flags =
 
 noCmd model =
     ( model, Cmd.none )
+
+
+updateRemap : Gamepad.Remap.Msg -> Gamepad.Remap.Model String -> Model -> ( Model, Cmd Msg )
+updateRemap remapMsg remapModel model =
+    case Gamepad.Remap.update remapMsg remapModel of
+        Gamepad.Remap.StillOpen newModel ->
+            noCmd { model | maybeModal = Just <| Remapping newModel }
+
+        Gamepad.Remap.Error message ->
+            noCmd { model | maybeModal = Just <| Message message }
+
+        Gamepad.Remap.UpdateDatabase updateDatabase ->
+            let
+                gamepadDatabase =
+                    updateDatabase model.gamepadDatabase
+
+                cmd =
+                    gamepadDatabase
+                        |> Gamepad.databaseToString
+                        |> LocalStoragePort.set model.gamepadDatabaseKey
+
+                newModel =
+                    { model
+                        | maybeModal = Just <| Message "Gamepad configured!"
+                        , gamepadDatabase = gamepadDatabase
+                    }
+            in
+                ( newModel, cmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -154,17 +202,13 @@ update msg model =
                 }
 
         OnRemapButton ->
-            Config.Remap.init
-                |> Tuple.mapFirst (\remapModel -> { model | maybeModal = Just <| Remapping remapModel })
-                |> Tuple.mapSecond (Cmd.map OnRemapMsg)
+            -- TODO: remove hardcoded gamepad index
+            noCmd { model | maybeModal = Just <| Remapping <| Gamepad.Remap.init 0 gamepadControls }
 
-        OnRemapMsg nestedMsg ->
+        OnRemapMsg remapMsg ->
             case model.maybeModal of
                 Just (Remapping remapModel) ->
-                    remapModel
-                        |> Config.Remap.update nestedMsg
-                        |> Tuple.mapFirst (\remapModel -> { model | maybeModal = Just <| Remapping remapModel })
-                        |> Tuple.mapSecond (Cmd.map OnRemapMsg)
+                    updateRemap remapMsg remapModel model
 
                 _ ->
                     noCmd model
@@ -241,8 +285,11 @@ view model =
                             Main ->
                                 viewConfig model
 
+                            Message m ->
+                                text m
+
                             Remapping remapModel ->
-                                Config.Remap.view remapModel |> Html.map OnRemapMsg
+                                Gamepad.Remap.view remapModel |> text
                         ]
                     ]
         ]
@@ -256,11 +303,19 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Keyboard.ups OnKey
-        , if model.maybeModal == Just Main then
-            GamepadPort.gamepad OnGamepad
-          else
-            Sub.none
         , App.subscriptions model.app |> Sub.map OnAppMsg
+        , case model.maybeModal of
+            Nothing ->
+                Sub.none
+
+            Just Main ->
+                GamepadPort.gamepad OnGamepad
+
+            Just (Remapping remap) ->
+                Gamepad.Remap.subscriptions GamepadPort.gamepad |> Sub.map OnRemapMsg
+
+            Just (Message m) ->
+                Sub.none
         ]
 
 
