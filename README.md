@@ -3,17 +3,18 @@ Haifisch
 
 A very simple player-vs-player shooter.
 
-It works only with gamepads so far, so you will need at least two gamepads.
+It is multiplayer-only so far, so you will need at least a gamepad to shoot at something.
+
+The gamepad remapping tool will remap only the first gamepad because I'm lazy, but hope
+to fix it soon-ish.
 
 See it running [here](https://xarvh.github.io/elm-haifisch/).
 
 
 Goals
 =====
-* Make something that looks nice, it's fun, and it's simple
-* Learn Svg and animations
-* Find out a good API for a gamepads library
-* Find out how far can I go with Elm before I yield to the urge of refactoring
+* Experiment with making games in a purely functional language
+* Experiment writing bots
 
 
 Additional Credits
@@ -24,9 +25,7 @@ Additional Credits
 
 TODO
 ====
-* Code and Svg optimization
 * Computer-controlled opponents?
 * Actual dynamics with acceleration and inertia rather than just a speed?
 * Make the star and the planet actually do something?
-* Gamepad configuration tool?
 * Multiplayer via websockets + server
