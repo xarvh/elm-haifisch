@@ -1,5 +1,6 @@
 module App exposing (..)
 
+import Bots
 import Common exposing (Id, InputState)
 import Dict exposing (Dict)
 import Dict.Extra
@@ -34,10 +35,12 @@ type alias Config =
 
 type Controller
     = ControllerHuman Input.Source
+    | ControllerBot Id
 
 
 type alias Model =
-    { controllersAndPlayerIds : List ( Controller, Id )
+    { bots : List Bots.Model
+    , controllersAndPlayerIds : List ( Controller, Id )
     , input : Input.Model
     , game : Game.Model
     , windowSizeInPixels : Window.Size
@@ -57,7 +60,8 @@ type Msg
 
 init : Int -> ( Model, Cmd Msg )
 init dateNow =
-    ( { controllersAndPlayerIds = []
+    ( { bots = [ Bots.init ]
+      , controllersAndPlayerIds = []
       , input = Input.init
       , game = Game.init (Random.initialSeed dateNow)
       , windowSizeInPixels = Window.Size 1 1
@@ -150,9 +154,18 @@ manageInput config blob model =
                 (Gamepad.getGamepads config.gamepadDatabase blob)
                 model.input
 
-        controllersAndStates =
+        humanControllersAndStates =
             inputSourcesAndRawStates
                 |> List.map (\( source, raw ) -> ( ControllerHuman source, resolveMouseAim model source raw ))
+
+        botsAndStates =
+            model.bots |> List.map (Bots.think model.game)
+
+        botControllersAndStates =
+            botsAndStates |> List.map (Tuple.mapFirst (.id >> ControllerBot))
+
+        controllersAndStates =
+            humanControllersAndStates ++ botControllersAndStates
 
         --
         findPlayerId ( controller, state ) =
@@ -190,6 +203,7 @@ manageInput config blob model =
         ( { model
             | game = game
             , controllersAndPlayerIds = controllersAndPlayerIds
+            , bots = botsAndStates |> List.map Tuple.first
           }
         , stateByPlayerId
         )
