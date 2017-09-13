@@ -60,15 +60,22 @@ type Msg
 
 init : Int -> ( Model, Cmd Msg )
 init dateNow =
-    ( { bots = [ Bots.init ]
-      , controllersAndPlayerIds = []
-      , input = Input.init
-      , game = Game.init (Random.initialSeed dateNow)
-      , windowSizeInPixels = Window.Size 1 1
-      , windowSizeInGameCoordinates = vec2 1 1
-      }
-    , Task.perform OnWindowResizes Window.size
-    )
+    let
+        game =
+            Game.init (Random.initialSeed dateNow)
+
+        bots =
+            Bots.addBot (Bots.fullRandomBot game) []
+    in
+        ( { bots = bots
+          , controllersAndPlayerIds = []
+          , input = Input.init
+          , game = game
+          , windowSizeInPixels = Window.Size 1 1
+          , windowSizeInGameCoordinates = vec2 1 1
+          }
+        , Task.perform OnWindowResizes Window.size
+        )
 
 
 
