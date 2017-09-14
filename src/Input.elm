@@ -115,6 +115,39 @@ gamepadToInputState gamepad =
 -- input assignment
 
 
+activeInputDevices : Maybe Config -> List Gamepad -> List Game.InputDevice
+activeInputDevices maybeConfig gamepads =
+    let
+        config =
+            case maybeConfig of
+                Just config ->
+                    config
+
+                Nothing ->
+                    if List.length gamepads > 0 then
+                        AllPlayersUseGamepads
+                    else
+                        OnePlayerUsesKeyboardAndMouse
+
+        keyboardAndMouseDevices =
+            case config of
+                AllPlayersUseGamepads ->
+                    []
+
+                OnePlayerUsesKeyboardAndMouse ->
+                    [ Game.InputDeviceKeyboardAndMouse ]
+
+        gamepadDevices =
+          gamepads
+            |> List.map (Gamepad.getIndex >> Game.InputDeviceGamepad)
+    in
+        keyboardAndMouseDevices ++ gamepadDevices
+
+
+
+
+
+{-
 sourcesAndStates : Maybe Config -> List Gamepad -> Model -> List ( Source, RawInputState )
 sourcesAndStates maybeConfig gamepads model =
     let
@@ -144,6 +177,7 @@ sourcesAndStates maybeConfig gamepads model =
             gamepads |> List.map gamepadToTuple
     in
         keyboardInputs ++ gamepadInputs
+-}
 
 
 

@@ -32,15 +32,14 @@ type alias Config =
     , gamepadDatabase : Gamepad.Database
     }
 
-
-type Controller
-    = ControllerHuman Input.Source
-    | ControllerBot Id
+-- type Controller
+--     = ControllerHuman Input.Source
+--     | ControllerBot Id
 
 
 type alias Model =
-    { bots : List Bots.Model
-    , controllersAndPlayerIds : List ( Controller, Id )
+--     { bots : List Bots.Model
+--     , controllersAndPlayerIds : List ( Controller, Id )
     , input : Input.Model
     , game : Game.Model
     , windowSizeInPixels : Window.Size
