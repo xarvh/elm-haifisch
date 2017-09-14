@@ -2,7 +2,7 @@ module Systems.Input exposing (..)
 
 import Components
 import Dict
-import Game exposing (Game)
+import Game exposing (Game, InputDevice, Controller(ControllerHuman))
 import Gamepad exposing (Gamepad)
 import Input
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
@@ -14,13 +14,13 @@ import Window
 
 addHumanPlayer : InputDevice -> Game -> Game
 addHumanPlayer device game =
-    game
+    Game.addPlayer (ControllerHuman device) game |> Tuple.first
 
 
 controllerToInputDevice : Controller -> Maybe InputDevice
 controllerToInputDevice controller =
     case controller of
-        Human inputDevice ->
+        ControllerHuman inputDevice ->
             Just inputDevice
 
         _ ->
