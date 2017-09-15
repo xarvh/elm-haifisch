@@ -3,11 +3,12 @@ module View exposing (..)
 import Array exposing (Array)
 import ColorPattern exposing (ColorPattern)
 import Common exposing (..)
+import Components
 import Dict exposing (Dict)
 import Html as H exposing (Html)
 import Html.Events as HE
 import Html.Attributes as HA
-import Game
+import Game exposing (Game)
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Random
 import Ship
@@ -160,11 +161,14 @@ outerWellMarker =
 -- SHIPS
 
 
-shipMesh : Float -> ColorPattern -> Ship -> Svg msg
-shipMesh opacity colorPattern ship =
+shipMesh : Float -> Vec2 -> Float -> ColorPattern -> Svg msg
+shipMesh opacity position heading colorPattern =
     let
+        tr polygon =
+            List.map (rotateVector heading >> Vec2.add position) polygon
+
         vertices =
-            Ship.transform ship Ship.mesh
+            tr Ship.mesh
                 |> List.map vectorToString
 
         path =
@@ -183,79 +187,82 @@ shipMesh opacity colorPattern ship =
             []
 
 
-ship : PlayersById -> Ship -> Svg msg
-ship playersById ship =
-    let
-        colorPattern =
-            Dict.get ship.playerId playersById
-                |> Maybe.map .colorPattern
-                |> Maybe.withDefault ColorPattern.neutral
-    in
-        case ship.status of
-            Active ->
-                shipMesh 1.0 colorPattern ship
-
-            Spawning ->
-                let
-                    blinkPeriod =
-                        0.25 * Time.second
-
-                    phase =
-                        ship.respawnTime / blinkPeriod
-
-                    normalPhase =
-                        phase - (toFloat <| floor phase)
-
-                    angularPhase =
-                        normalPhase * turns 1
-
-                    opacity =
-                        (1 + sin angularPhase) / 2
-                in
-                    shipMesh opacity colorPattern ship
-
-            Exploding ->
-                let
-                    t =
-                        ship.explodeTime / Ship.explosionDuration
-
-                    -- particle count
-                    n =
-                        5
-
-                    -- max explosion size
-                    r =
-                        0.1 * worldRadius
-
-                    particleByIndex index =
-                        let
-                            a =
-                                turns (index / n)
-
-                            x =
-                                t * r * cos a
-
-                            y =
-                                t * r * sin a
-                        in
-                            S.circle
-                                [ SA.cx <| toString x
-                                , SA.cy <| toString y
-                                , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
-                                , SA.opacity <| toString <| (1 - t) / 3
-                                , SA.fill colorPattern.dark
-                                , SA.stroke colorPattern.bright
-                                , SA.strokeWidth <| toString <| shipStrokWidth * 2
-                                ]
-                                []
-                in
-                    S.g
-                        [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
-                        ]
-                        (List.map particleByIndex <| List.map toFloat <| List.range 0 <| n - 1)
+shipView : ( Components.EntityId, Game.ShipComponent, Vec2, Float, ColorPattern ) -> Svg msg
+shipView ( id, ship, position, heading, colorPattern ) =
+    {-
+       let
+           colorPattern =
+               Dict.get ship.playerId playersById
+                   |> Maybe.map .colorPattern
+                   |> Maybe.withDefault ColorPattern.neutral
+       in
+           case ship.status of
+               Active ->
+    -}
+    shipMesh 1.0 position heading colorPattern
 
 
 
+{-
+   Spawning ->
+       let
+           blinkPeriod =
+               0.25 * Time.second
+
+           phase =
+               ship.respawnTime / blinkPeriod
+
+           normalPhase =
+               phase - (toFloat <| floor phase)
+
+           angularPhase =
+               normalPhase * turns 1
+
+           opacity =
+               (1 + sin angularPhase) / 2
+       in
+           shipMesh opacity colorPattern ship
+
+   Exploding ->
+       let
+           t =
+               ship.explodeTime / Ship.explosionDuration
+
+           -- particle count
+           n =
+               5
+
+           -- max explosion size
+           r =
+               0.1 * worldRadius
+
+           particleByIndex index =
+               let
+                   a =
+                       turns (index / n)
+
+                   x =
+                       t * r * cos a
+
+                   y =
+                       t * r * sin a
+               in
+                   S.circle
+                       [ SA.cx <| toString x
+                       , SA.cy <| toString y
+                       , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
+                       , SA.opacity <| toString <| (1 - t) / 3
+                       , SA.fill colorPattern.dark
+                       , SA.stroke colorPattern.bright
+                       , SA.strokeWidth <| toString <| shipStrokWidth * 2
+                       ]
+                       []
+       in
+           S.g
+               [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
+               ]
+               (List.map particleByIndex <| List.map toFloat <| List.range 0 <| n - 1)
+-}
 -- Projectiles
 
 
@@ -299,23 +306,29 @@ viewbox worldSize =
 -- Main
 
 
-game : Vec2 -> Game.Model -> Html a
-game worldSize model =
+game : Vec2 -> Game -> Html a
+game worldSize game =
     let
-        playerIds =
-            model.players |> List.map .id
-
-        playersById =
-            List.map2 (,) playerIds model.players |> Dict.fromList
+        ships =
+            Components.all4 game ( .cShip, .cPosition, .cHeading, .cColorPattern )
 
         entities =
-            [ [ star
-              , outerWellMarker
-              ]
-            , List.map planet model.planets
-            , List.map (ship playersById) (Dict.values model.shipsById)
-            , List.map (projectile playersById) model.projectiles
-            ]
+            [ List.map shipView ships ]
+
+        {-
+           playerIds =
+               model.players |> List.map .id
+
+           playersById =
+               List.map2 (,) playerIds model.players |> Dict.fromList
+
+           entities =
+               [ [ star , outerWellMarker ]
+               , List.map planet model.planets
+               , List.map (ship playersById) (Dict.values model.shipsById)
+               , List.map (projectile playersById) model.projectiles
+               ]
+        -}
     in
         H.div
             [ HA.class "star-system-container full-window" ]

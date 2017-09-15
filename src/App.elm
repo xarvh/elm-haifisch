@@ -1,7 +1,9 @@
 module App exposing (..)
 
 -- import Bots
+
 import Common exposing (Id, InputState)
+import Components exposing (EntityId)
 import Dict exposing (Dict)
 import Dict.Extra
 import Game exposing (Game)
@@ -19,10 +21,35 @@ import SoundPort
 import Systems.Input
 import Task
 import Time exposing (Time)
--- import View
--- import View.Background
+import View
+import View.Background
+
+
 -- import View.Scoreboard
+
 import Window
+
+
+-- TODO Move this in Systems.Ships?
+
+
+spawnShipsForPlayersWithoutAShip : Game -> Game
+spawnShipsForPlayersWithoutAShip game =
+    let
+        playerLacksShips : (EntityId, Game.PlayerComponent, a) -> Bool
+        playerLacksShips ( id, player, _ ) =
+            Maybe.andThen (Components.get game.cShip) player.maybeShipId == Nothing
+
+        playersWithoutAShip =
+            Components.all2 game ( .cPlayer, .cColorPattern )
+                |> List.filter playerLacksShips
+
+        addShipForPlayer ( id, player, colorPattern ) game =
+            Game.addShip colorPattern id game |> Tuple.first
+    in
+        playersWithoutAShip
+            |> List.foldl addShipForPlayer game
+
 
 
 -- types
@@ -210,9 +237,7 @@ resizeWindow : Window.Size -> Model -> Model
 resizeWindow sizeInPixels model =
     let
         internalCoordinatesHeight =
-            0
-            -- TODO
-            -- Game.worldRadius * 2.1
+            Game.worldRadius * 2.1
 
         internalCoordinatesWidth =
             toFloat sizeInPixels.width * internalCoordinatesHeight / toFloat sizeInPixels.height
@@ -257,6 +282,7 @@ updateAnimationFrame config dt blob model =
         game =
             model.game
                 |> Systems.Input.createPlayersForStrayInputs activeInputDevices
+                |> spawnShipsForPlayersWithoutAShip
 
         {-
            ( model, inputStatesByPlayerId ) =
@@ -296,20 +322,16 @@ update isPaused config msg model =
 
 view : Model -> Html Msg
 view model =
-    model.game.cPlayer
-        |> toString
-        |> text
+    div
+        []
+        [ View.Background.view
+        , View.game model.windowSizeInGameCoordinates model.game
+
+        -- , View.Scoreboard.scoreboard model.game.players model.game.shipsById
+        ]
 
 
 
-{-
-   div
-       []
-       [ View.Background.view
-       , View.game model.windowSizeInGameCoordinates model.game
-       , View.Scoreboard.scoreboard model.game.players model.game.shipsById
-       ]
--}
 -- subscriptions
 
 
