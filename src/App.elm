@@ -23,14 +23,8 @@ import Task
 import Time exposing (Time)
 import View
 import View.Background
-
-
--- import View.Scoreboard
-
+import View.Scoreboard
 import Window
-
-
-
 
 
 -- types
@@ -218,7 +212,7 @@ resizeWindow : Window.Size -> Model -> Model
 resizeWindow sizeInPixels model =
     let
         internalCoordinatesHeight =
-            Game.worldRadius * 2.1
+            Common.worldRadius * 2.1
 
         internalCoordinatesWidth =
             toFloat sizeInPixels.width * internalCoordinatesHeight / toFloat sizeInPixels.height
@@ -307,8 +301,7 @@ view model =
         []
         [ View.Background.view
         , View.game model.windowSizeInGameCoordinates model.game
-
-        -- , View.Scoreboard.scoreboard model.game.players model.game.shipsById
+        , View.Scoreboard.scoreboard model.game
         ]
 
 

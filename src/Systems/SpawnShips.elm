@@ -1,22 +1,22 @@
 module Systems.SpawnShips exposing (..)
 
 import Components exposing (EntityId)
+import Dict
 import Game exposing (Game)
 
 
 spawnShipsForPlayersWithoutAShip : Game -> Game
 spawnShipsForPlayersWithoutAShip game =
     let
-        playerLacksShips : ( EntityId, Game.PlayerComponent, a ) -> Bool
+        shipsByOwnerId =
+            Game.shipsByOwnerId game
+
         playerLacksShips ( id, player, _ ) =
-            Maybe.andThen (Components.get game.cShip) player.maybeShipId == Nothing
+            Dict.member id shipsByOwnerId
 
         playersWithoutAShip =
             Components.all2 game ( .cPlayer, .cColorPattern )
                 |> List.filter playerLacksShips
-
-        addShipForPlayer ( id, player, colorPattern ) game =
-            Game.addShip colorPattern id game |> Tuple.first
     in
         playersWithoutAShip
-            |> List.foldl addShipForPlayer game
+            |> List.foldl Game.addShip game

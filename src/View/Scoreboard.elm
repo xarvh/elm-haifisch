@@ -1,8 +1,8 @@
 module View.Scoreboard exposing (..)
 
-import Common exposing (Player, Ship, Id)
+import Components
+import Game exposing (Game)
 import Dict exposing (Dict)
-import Dict.Extra
 import Html exposing (..)
 import Html.Attributes exposing (class, style)
 
@@ -11,41 +11,41 @@ textColor color =
     style [ ( "color", color ) ]
 
 
-shipName : Player -> Dict Id Ship -> String
-shipName player shipsById =
-    shipsById
-        |> Dict.Extra.find (\shipId ship -> ship.playerId == player.id)
-        |> Maybe.map (Tuple.second >> .name)
-        |> Maybe.withDefault ""
-
-
-score shipsById player =
+scoreView shipNameByOwnerId ( id, player, colorPattern ) =
     li
         []
         [ p
             [ class "score"
-            , textColor player.colorPattern.bright
+            , textColor colorPattern.bright
             ]
             [ text <| toString player.score ]
         , p
             [ class "name"
-            , textColor player.colorPattern.bright
+            , textColor colorPattern.bright
             ]
-            [ shipName player shipsById |> text ]
+            [ shipNameByOwnerId id |> text ]
         ]
 
 
-scoreboard : List Player -> Dict Id Ship -> Html msg
-scoreboard players shipsById =
+scoreboard : Game -> Html msg
+scoreboard game =
     let
-        visiblePlayers =
-            players
-                |> List.filter .isConnected
-                |> List.sortBy .id
+        shipsByOwnerId =
+            Game.shipsByOwnerId game
+
+        shipNameByOwnerId playerId =
+            Dict.get playerId shipsByOwnerId
+                |> Maybe.map (Tuple.second >> .name)
+                |> Maybe.withDefault ""
+
+        allScores =
+            Components.all2 game ( .cPlayer, .cColorPattern )
+                |> List.filter (\( id, player, color ) -> player.inputState /= Nothing)
+                |> List.map (scoreView shipNameByOwnerId)
     in
         div
             [ class "scoreboard-container" ]
             [ ul
                 [ class "scoreboard" ]
-                (List.map (score shipsById) visiblePlayers)
+                allScores
             ]

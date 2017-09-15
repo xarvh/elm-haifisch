@@ -19,7 +19,7 @@ import Time
 
 
 worldRadius =
-    Game.worldRadius
+    Common.worldRadius
 
 
 projectileRadius =

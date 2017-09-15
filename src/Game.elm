@@ -7,19 +7,11 @@ import Array exposing (Array)
 
 import ColorPattern exposing (ColorPattern)
 import Components exposing (Components, EntityId)
-import Dict
+import Dict exposing (Dict)
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Time exposing (Time)
 import Random
 import Random.Array
-
-
--- Stuff that probably shouldn't live here
-
-
-worldRadius =
-    1
-
 
 
 -- Types
@@ -46,7 +38,6 @@ type alias PlayerComponent =
     { controller : Controller
     , inputState : Maybe InputState
     , score : Int
-    , maybeShipId : Maybe EntityId
     }
 
 
@@ -206,7 +197,6 @@ addPlayer controller game =
             { controller = controller
             , inputState = Nothing
             , score = 0
-            , maybeShipId = Nothing
             }
 
         components =
@@ -217,8 +207,8 @@ addPlayer controller game =
         addEntity components game
 
 
-addShip : ColorPattern -> EntityId -> Game -> ( Game, EntityId )
-addShip colorPattern ownerId game =
+addShip : ( EntityId, PlayerComponent, ColorPattern ) -> Game -> Game
+addShip ( ownerId, player, colorPattern ) game =
     let
         ( seed, ( position, name ) ) =
             -- TODO
@@ -243,4 +233,17 @@ addShip colorPattern ownerId game =
             , sShip ship
             ]
     in
-        addEntity components { game | seed = seed }
+        { game | seed = seed }
+            |> addEntity components
+            |> Tuple.first
+
+
+
+-- Helpers
+
+
+shipsByOwnerId : Game -> Dict EntityId ( EntityId, ShipComponent )
+shipsByOwnerId game =
+    Components.all2 game ( .cOwner, .cShip )
+        |> List.map (\( shipId, ownerId, ship ) -> ( ownerId, ( shipId, ship ) ))
+        |> Dict.fromList
