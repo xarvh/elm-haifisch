@@ -252,3 +252,9 @@ shipsByOwnerId game =
     Components.all2 game ( .cOwner, .cShip )
         |> List.map (\( shipId, ownerId, ship ) -> ( ownerId, ( shipId, ship ) ))
         |> Dict.fromList
+
+
+shipOwner : Game -> EntityId -> Maybe PlayerComponent
+shipOwner game shipId =
+    Components.get game.cOwner shipId
+        |> Maybe.andThen (Components.get1 game .cPlayer)

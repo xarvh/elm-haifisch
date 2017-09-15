@@ -12,7 +12,7 @@ spawnShipsForPlayersWithoutAShip game =
             Game.shipsByOwnerId game
 
         playerLacksShips ( id, player, _ ) =
-            Dict.member id shipsByOwnerId
+            Dict.member id shipsByOwnerId |> not
 
         playersWithoutAShip =
             Components.all2 game ( .cPlayer, .cColorPattern )

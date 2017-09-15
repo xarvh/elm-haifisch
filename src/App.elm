@@ -18,6 +18,7 @@ import MousePort
 import Random
 import SoundPort
 import Systems.Input
+import Systems.Movement
 import Systems.SpawnShips
 import Task
 import Time exposing (Time)
@@ -117,6 +118,7 @@ windowToGameCoordinates model positionInPixels =
         vec2 gameX gameY
 
 
+
 {-
    eventToCmd : Common.Event -> Cmd msg
    eventToCmd event =
@@ -159,6 +161,7 @@ updateAnimationFrame config dt blob model =
                 |> Systems.Input.createPlayersForStrayInputs activeInputDevices
                 |> Systems.Input.applyInputStatesToPlayers inputSystemArgs
                 |> Systems.SpawnShips.spawnShipsForPlayersWithoutAShip
+                |> Systems.Movement.movement dt
     in
         ( { model | game = game }, Cmd.none )
 
