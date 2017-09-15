@@ -3,7 +3,6 @@ module App exposing (..)
 -- import Bots
 
 import Common exposing (Id, InputState)
-import Components exposing (EntityId)
 import Dict exposing (Dict)
 import Dict.Extra
 import Game exposing (Game)
@@ -19,6 +18,7 @@ import MousePort
 import Random
 import SoundPort
 import Systems.Input
+import Systems.SpawnShips
 import Task
 import Time exposing (Time)
 import View
@@ -30,25 +30,6 @@ import View.Background
 import Window
 
 
--- TODO Move this in Systems.Ships?
-
-
-spawnShipsForPlayersWithoutAShip : Game -> Game
-spawnShipsForPlayersWithoutAShip game =
-    let
-        playerLacksShips : (EntityId, Game.PlayerComponent, a) -> Bool
-        playerLacksShips ( id, player, _ ) =
-            Maybe.andThen (Components.get game.cShip) player.maybeShipId == Nothing
-
-        playersWithoutAShip =
-            Components.all2 game ( .cPlayer, .cColorPattern )
-                |> List.filter playerLacksShips
-
-        addShipForPlayer ( id, player, colorPattern ) game =
-            Game.addShip colorPattern id game |> Tuple.first
-    in
-        playersWithoutAShip
-            |> List.foldl addShipForPlayer game
 
 
 
@@ -282,7 +263,7 @@ updateAnimationFrame config dt blob model =
         game =
             model.game
                 |> Systems.Input.createPlayersForStrayInputs activeInputDevices
-                |> spawnShipsForPlayersWithoutAShip
+                |> Systems.SpawnShips.spawnShipsForPlayersWithoutAShip
 
         {-
            ( model, inputStatesByPlayerId ) =
