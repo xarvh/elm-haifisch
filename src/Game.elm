@@ -26,6 +26,13 @@ type alias InputState =
     }
 
 
+neutralInputState =
+    { finalAim = AimRelative (vec2 0 1)
+    , fire = False
+    , move = vec2 0 0
+    }
+
+
 type InputDevice
     = InputDeviceKeyboardAndMouse
     | InputDeviceGamepad Int

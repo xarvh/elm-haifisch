@@ -19,6 +19,7 @@ import Random
 import SoundPort
 import Systems.Input
 import Systems.Movement
+import Systems.Ship
 import Systems.SpawnShips
 import Task
 import Time exposing (Time)
@@ -161,6 +162,7 @@ updateAnimationFrame config dt blob model =
                 |> Systems.Input.createPlayersForStrayInputs activeInputDevices
                 |> Systems.Input.applyInputStatesToPlayers inputSystemArgs
                 |> Systems.SpawnShips.spawnShipsForPlayersWithoutAShip
+                |> Systems.Ship.shipsSystems dt
                 |> Systems.Movement.movement dt
     in
         ( { model | game = game }, Cmd.none )
