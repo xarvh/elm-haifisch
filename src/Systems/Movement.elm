@@ -12,13 +12,20 @@ speed =
     7 * Common.shipLength / Time.second
 
 
+{-| TODO: this should probably live in a "ship control" system?
+-}
 shipVelocity : Game -> ( EntityId, Game.ShipComponent ) -> Vec2
 shipVelocity game ( id, ship ) =
-    -- TODO: exploding ships can't move
-    Game.shipOwner game id
-        |> Maybe.andThen .inputState
-        |> Maybe.map (.move >> Vec2.scale speed)
-        |> Maybe.withDefault (vec2 0 0)
+    case ship.status of
+        Game.ShipExploding ->
+            vec2 0 0
+
+        _ ->
+            -- TODO: exploding ships can't move
+            Game.shipOwner game id
+                |> Maybe.andThen .inputState
+                |> Maybe.map (.move >> Vec2.scale speed)
+                |> Maybe.withDefault (vec2 0 0)
 
 
 entityVelocity : Game -> EntityId -> Vec2

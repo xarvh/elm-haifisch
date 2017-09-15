@@ -1,10 +1,7 @@
 module Game exposing (..)
 
 import Array exposing (Array)
-
-
--- import Bots
-
+import Common
 import ColorPattern exposing (ColorPattern)
 import Components exposing (Components, EntityId)
 import Dict exposing (Dict)
@@ -14,7 +11,7 @@ import Random
 import Random.Array
 
 
--- Types
+-- Player & Input
 
 
 type Aim
@@ -46,14 +43,27 @@ type alias PlayerComponent =
     }
 
 
+
+-- Ship
+
+
+type ShipStatus
+    = ShipSpawning
+    | ShipActive
+    | ShipExploding
+
+
 type alias ShipComponent =
     { name : String
     , explodeTime : Time
     , reloadTime : Time
     , respawnTime : Time
-
-    --, status : Status
+    , status : ShipStatus
     }
+
+
+
+-- Orbit
 
 
 type alias OrbitComponent =
@@ -63,6 +73,10 @@ type alias OrbitComponent =
     , orbitRadius : Float
     , surfaceRadius : Float
     }
+
+
+
+-- Game
 
 
 type alias Game =
@@ -78,7 +92,6 @@ type alias Game =
     , cShip : Components ShipComponent
 
     -- other stuff
-    --, bots : Array Bots.Model
     , seed : Random.Seed
     , shuffledColorPatterns : Array ColorPattern
     }
@@ -220,14 +233,14 @@ addShip ( ownerId, player, colorPattern ) game =
             ( game.seed, ( vec2 0 0, "LOOL" ) )
 
         heading =
-            -- TODO
-            0
+            Vec2.negate position |> Common.vectorToAngle
 
         ship =
             { name = name
             , explodeTime = 0
             , reloadTime = 0
             , respawnTime = 0
+            , status = ShipSpawning
             }
 
         components =

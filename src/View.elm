@@ -189,80 +189,71 @@ shipMesh opacity position heading colorPattern =
 
 shipView : ( Components.EntityId, Game.ShipComponent, Vec2, Float, ColorPattern ) -> Svg msg
 shipView ( id, ship, position, heading, colorPattern ) =
-    {-
-       let
-           colorPattern =
-               Dict.get ship.playerId playersById
-                   |> Maybe.map .colorPattern
-                   |> Maybe.withDefault ColorPattern.neutral
-       in
-           case ship.status of
-               Active ->
-    -}
-    shipMesh 1.0 position heading colorPattern
+    case ship.status of
+        Game.ShipActive ->
+            shipMesh 1.0 position heading colorPattern
+
+        Game.ShipSpawning ->
+            let
+                blinkPeriod =
+                    0.25 * Time.second
+
+                phase =
+                    ship.respawnTime / blinkPeriod
+
+                normalPhase =
+                    phase - (toFloat <| floor phase)
+
+                angularPhase =
+                    normalPhase * turns 1
+
+                opacity =
+                    (1 + sin angularPhase) / 2
+            in
+                shipMesh opacity position heading colorPattern
+
+        Game.ShipExploding ->
+            let
+                t =
+                    ship.explodeTime / Ship.explosionDuration
+
+                -- particle count
+                n =
+                    5
+
+                -- max explosion size
+                r =
+                    0.1 * worldRadius
+
+                particleByIndex index =
+                    let
+                        a =
+                            turns (index / n)
+
+                        x =
+                            t * r * cos a
+
+                        y =
+                            t * r * sin a
+                    in
+                        S.circle
+                            [ SA.cx <| toString x
+                            , SA.cy <| toString y
+                            , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
+                            , SA.opacity <| toString <| (1 - t) / 3
+                            , SA.fill colorPattern.dark
+                            , SA.stroke colorPattern.bright
+                            , SA.strokeWidth <| toString <| shipStrokWidth * 2
+                            ]
+                            []
+            in
+                S.g
+                    [ SA.transform <| "translate(" ++ vectorToString position ++ ")"
+                    ]
+                    (List.map particleByIndex <| List.map toFloat <| List.range 0 <| n - 1)
 
 
 
-{-
-   Spawning ->
-       let
-           blinkPeriod =
-               0.25 * Time.second
-
-           phase =
-               ship.respawnTime / blinkPeriod
-
-           normalPhase =
-               phase - (toFloat <| floor phase)
-
-           angularPhase =
-               normalPhase * turns 1
-
-           opacity =
-               (1 + sin angularPhase) / 2
-       in
-           shipMesh opacity colorPattern ship
-
-   Exploding ->
-       let
-           t =
-               ship.explodeTime / Ship.explosionDuration
-
-           -- particle count
-           n =
-               5
-
-           -- max explosion size
-           r =
-               0.1 * worldRadius
-
-           particleByIndex index =
-               let
-                   a =
-                       turns (index / n)
-
-                   x =
-                       t * r * cos a
-
-                   y =
-                       t * r * sin a
-               in
-                   S.circle
-                       [ SA.cx <| toString x
-                       , SA.cy <| toString y
-                       , SA.r <| toString <| (t * 0.9 + 0.1) * 0.2 * worldRadius
-                       , SA.opacity <| toString <| (1 - t) / 3
-                       , SA.fill colorPattern.dark
-                       , SA.stroke colorPattern.bright
-                       , SA.strokeWidth <| toString <| shipStrokWidth * 2
-                       ]
-                       []
-       in
-           S.g
-               [ SA.transform <| "translate(" ++ vectorToString ship.position ++ ")"
-               ]
-               (List.map particleByIndex <| List.map toFloat <| List.range 0 <| n - 1)
--}
 -- Projectiles
 
 
