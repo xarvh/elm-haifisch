@@ -22,18 +22,6 @@ worldRadius =
     Common.worldRadius
 
 
-projectileRadius =
-    0.01 * worldRadius
-
-
-shipStrokWidth =
-    0.005 * worldRadius
-
-
-type alias PlayersById =
-    Dict Id Player
-
-
 
 -- Splash
 
@@ -158,7 +146,11 @@ outerWellMarker =
 
 
 
--- SHIPS
+-- Ships
+
+
+shipStrokWidth =
+    0.005 * worldRadius
 
 
 shipMesh : Float -> Vec2 -> Float -> ColorPattern -> Svg msg
@@ -255,34 +247,35 @@ shipView ( id, ship, position, heading, colorPattern ) =
 
 
 -- Projectiles
+{-
+   projectile : PlayersById -> Projectile -> Svg msg
+   projectile playersById projectile =
+       let
+           colorPattern =
+               Dict.get projectile.playerId playersById
+                   |> Maybe.map .colorPattern
+                   |> Maybe.withDefault ColorPattern.neutral
 
+           size =
+               0.01 * worldRadius
 
-projectile : PlayersById -> Projectile -> Svg msg
-projectile playersById projectile =
-    let
-        colorPattern =
-            Dict.get projectile.playerId playersById
-                |> Maybe.map .colorPattern
-                |> Maybe.withDefault ColorPattern.neutral
-
-        size =
-            0.01 * worldRadius
-
-        ( x, y ) =
-            Vec2.toTuple projectile.position
-    in
-        S.g
-            []
-            [ S.circle
-                [ SA.cx <| toString <| x
-                , SA.cy <| toString <| y
-                , SA.r <| toString <| 0.01 * worldRadius
-                , SA.fill colorPattern.bright
-                , SA.stroke colorPattern.dark
-                , SA.strokeWidth <| toString <| 0.001 * worldRadius
-                ]
-                []
-            ]
+           ( x, y ) =
+               Vec2.toTuple projectile.position
+       in
+           S.g
+               []
+               [ S.circle
+                   [ SA.cx <| toString <| x
+                   , SA.cy <| toString <| y
+                   , SA.r <| toString <| 0.01 * worldRadius
+                   , SA.fill colorPattern.bright
+                   , SA.stroke colorPattern.dark
+                   , SA.strokeWidth <| toString <| 0.001 * worldRadius
+                   ]
+                   []
+               ]
+-}
+-- Main
 
 
 viewbox worldSize =
@@ -293,10 +286,6 @@ viewbox worldSize =
         String.join " " <| List.map toString [ -w / 2, -h / 2, w, h ]
 
 
-
--- Main
-
-
 game : Vec2 -> Game -> Html a
 game worldSize game =
     let
@@ -304,19 +293,14 @@ game worldSize game =
             Components.all4 game ( .cShip, .cPosition, .cHeading, .cColorPattern )
 
         entities =
-            [ List.map shipView ships ]
+            [ [ star, outerWellMarker ]
+            , List.map shipView ships
+            ]
 
         {-
-           playerIds =
-               model.players |> List.map .id
-
-           playersById =
-               List.map2 (,) playerIds model.players |> Dict.fromList
 
            entities =
-               [ [ star , outerWellMarker ]
                , List.map planet model.planets
-               , List.map (ship playersById) (Dict.values model.shipsById)
                , List.map (projectile playersById) model.projectiles
                ]
         -}
