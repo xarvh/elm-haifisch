@@ -8,7 +8,7 @@ import Dict exposing (Dict)
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Time exposing (Time)
 import Random
-import Random.Array
+import Random.List
 
 
 -- Player & Input
@@ -100,7 +100,7 @@ type alias Game =
 
     -- other stuff
     , seed : Random.Seed
-    , shuffledColorPatterns : Array ColorPattern
+    , shuffledColorPatterns : List ColorPattern
     }
 
 
@@ -195,7 +195,7 @@ init seed =
     --
     --, bots = Array.empty
     , seed = seed
-    , shuffledColorPatterns = Random.step (Random.Array.shuffle ColorPattern.patterns) seed |> Tuple.first
+    , shuffledColorPatterns = Random.step (Random.List.shuffle ColorPattern.patterns) seed |> Tuple.first
     }
 
 
@@ -206,27 +206,29 @@ init seed =
 addPlayer : Controller -> Game -> ( Game, EntityId )
 addPlayer controller game =
     let
-        {-
-           colorPattern =
-             game.cPlayer
-               |> Dict.keys
-               |> List.filterMap (Component.get game.cColorPattern)
-               |> Dict.Extra.groupBy identity
-               |> Dict.map (always List.length)
-        -}
-        -- TODO
-        colorPatternComponent =
-            ColorPattern.neutral
+        players =
+            Components.all2 game ( .cPlayer, .cColorPattern )
 
-        playerComponent =
+        colorPatternCount colorPattern =
+            players
+                |> List.filter (\( id, player, color ) -> color == colorPattern)
+                |> List.length
+
+        colorPattern =
+            game.shuffledColorPatterns
+                |> List.sortBy colorPatternCount
+                |> List.head
+                |> Maybe.withDefault ColorPattern.neutral
+
+        player =
             { controller = controller
             , inputState = Nothing
             , score = 0
             }
 
         components =
-            [ sPlayer playerComponent
-            , sColorPattern colorPatternComponent
+            [ sPlayer player
+            , sColorPattern colorPattern
             ]
     in
         addEntity components game

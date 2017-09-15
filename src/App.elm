@@ -47,7 +47,7 @@ type alias Model =
 
 
 type Msg
-    = OnAnimationFrame ( Time, Gamepad.Blob ) -- This msg is called directly by Config
+    = OnAnimationFrame ( Time, Gamepad.Blob )
     | OnInputMsg Input.Msg
     | OnWindowResizes Window.Size
 
