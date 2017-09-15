@@ -17,8 +17,13 @@ import Random.Array
 -- Types
 
 
+type Aim
+    = AimRelative Vec2
+    | AimAbsolute Vec2
+
+
 type alias InputState =
-    { finalAim : Vec2
+    { finalAim : Aim
     , fire : Bool
     , move : Vec2
     }

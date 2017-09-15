@@ -1,10 +1,11 @@
 module Systems.Input exposing (..)
 
-import Components
+import Components exposing (EntityId)
 import Dict
-import Game exposing (Game, InputDevice, Controller(ControllerHuman))
+import Game exposing (Game, InputDevice)
 import Gamepad exposing (Gamepad)
 import Input
+import List.Extra
 import Math.Vector2 as Vec2 exposing (Vec2, vec2)
 import Window
 
@@ -14,20 +15,20 @@ import Window
 
 addHumanPlayer : InputDevice -> Game -> Game
 addHumanPlayer device game =
-    Game.addPlayer (ControllerHuman device) game |> Tuple.first
+    Game.addPlayer (Game.ControllerHuman device) game |> Tuple.first
 
 
-controllerToInputDevice : Controller -> Maybe InputDevice
+controllerToInputDevice : Game.Controller -> Maybe InputDevice
 controllerToInputDevice controller =
     case controller of
-        ControllerHuman inputDevice ->
+        Game.ControllerHuman inputDevice ->
             Just inputDevice
 
         _ ->
             Nothing
 
 
-createPlayersForStrayInputs : List Game.InputDevice -> Game -> Game
+createPlayersForStrayInputs : List InputDevice -> Game -> Game
 createPlayersForStrayInputs activeDevices game =
     let
         usedDevices =
@@ -52,11 +53,36 @@ createPlayersForStrayInputs activeDevices game =
 type alias Args =
     { input : Input.Model
     , gamepads : List Gamepad
-    , windowSizeInPixels : Window.Size
-    , windowSizeInGameCoordinates : Vec2
+    , useKeyboardAndMouse : Bool
+    , windowToGameCoordinates : { x : Int, y : Int } -> Vec2
     }
+
+
+deviceInputState : Args -> InputDevice -> Maybe Game.InputState
+deviceInputState args device =
+    case device of
+        Game.InputDeviceGamepad index ->
+            args.gamepads
+                |> List.Extra.find (\g -> Gamepad.getIndex g == index)
+                |> Maybe.map Input.gamepadToInputState
+
+        Game.InputDeviceKeyboardAndMouse ->
+            if not args.useKeyboardAndMouse then
+                Nothing
+            else
+                Just (Input.keyboardAndMouseInputState args.input args.windowToGameCoordinates)
+
+
+applyInputState : Args -> EntityId -> Game.PlayerComponent -> Game.PlayerComponent
+applyInputState args playerId player =
+    case player.controller of
+        Game.ControllerBot _ ->
+            player
+
+        Game.ControllerHuman device ->
+            { player | inputState = deviceInputState args device }
 
 
 applyInputStatesToPlayers : Args -> Game -> Game
 applyInputStatesToPlayers args game =
-    game
+    { game | cPlayer = Dict.map (applyInputState args) game.cPlayer }

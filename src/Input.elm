@@ -11,28 +11,11 @@ import Time exposing (Time)
 
 
 -- types
-{-
-   type Source
-       = SourceKeyboardAndMouse
-       | SourceGamepad Int
--}
 
 
 type Config
     = AllPlayersUseGamepads
     | OnePlayerUsesKeyboardAndMouse
-
-
-type FinalAim
-    = Direction Vec2
-    | ScreenPosition Mouse.Position
-
-
-type alias RawInputState =
-    { finalAim : FinalAim
-    , fire : Bool
-    , move : Vec2
-    }
 
 
 type Msg
@@ -70,68 +53,27 @@ init =
 
 
 
--- input to player input state
+-- State
 
 
-keyboardAndMouseToInputState : Model -> RawInputState
-keyboardAndMouseToInputState model =
-    let
-        pixelsForAFullTurn =
-            2000
+config : Maybe Config -> List Gamepad -> Config
+config maybeConfig gamepads =
+    case maybeConfig of
+        Just config ->
+            config
 
-        turningRatio =
-            turns 1 / pixelsForAFullTurn
-
-        { x, y } =
-            Keyboard.Extra.wasd model.pressedKeys
-
-        move =
-            vec2 (toFloat x) (toFloat y)
-    in
-        { finalAim = ScreenPosition model.mousePosition
-        , fire = model.mouseButtonLeft
-        , move = move
-        }
-
-
-gamepadToInputState : Gamepad -> RawInputState
-gamepadToInputState gamepad =
-    let
-        aimDirection =
-            vec2 (Gamepad.rightX gamepad) (Gamepad.rightY gamepad)
-
-        fire =
-            Gamepad.aIsPressed gamepad
-
-        move =
-            vec2 (Gamepad.leftX gamepad) (Gamepad.leftY gamepad)
-    in
-        { finalAim = Direction aimDirection
-        , fire = fire
-        , move = move
-        }
-
-
-
--- input assignment
+        Nothing ->
+            if List.length gamepads > 0 then
+                AllPlayersUseGamepads
+            else
+                OnePlayerUsesKeyboardAndMouse
 
 
 activeInputDevices : Maybe Config -> List Gamepad -> List Game.InputDevice
 activeInputDevices maybeConfig gamepads =
     let
-        config =
-            case maybeConfig of
-                Just config ->
-                    config
-
-                Nothing ->
-                    if List.length gamepads > 0 then
-                        AllPlayersUseGamepads
-                    else
-                        OnePlayerUsesKeyboardAndMouse
-
         keyboardAndMouseDevices =
-            case config of
+            case config maybeConfig gamepads of
                 AllPlayersUseGamepads ->
                     []
 
@@ -145,38 +87,43 @@ activeInputDevices maybeConfig gamepads =
         keyboardAndMouseDevices ++ gamepadDevices
 
 
+keyboardAndMouseInputState : Model -> (Mouse.Position -> Vec2) -> Game.InputState
+keyboardAndMouseInputState model windowToGameCoordinates =
+    let
+        mousePositionInGameCoordinates =
+            windowToGameCoordinates model.mousePosition
 
-{-
-   sourcesAndStates : Maybe Config -> List Gamepad -> Model -> List ( Source, RawInputState )
-   sourcesAndStates maybeConfig gamepads model =
-       let
-           config =
-               case maybeConfig of
-                   Just config ->
-                       config
+        { x, y } =
+            Keyboard.Extra.wasd model.pressedKeys
 
-                   Nothing ->
-                       if List.length gamepads > 0 then
-                           AllPlayersUseGamepads
-                       else
-                           OnePlayerUsesKeyboardAndMouse
+        move =
+            vec2 (toFloat x) (toFloat y)
+    in
+        { finalAim = Game.AimAbsolute mousePositionInGameCoordinates
+        , fire = model.mouseButtonLeft
+        , move = move
+        }
 
-           keyboardInputs =
-               case config of
-                   AllPlayersUseGamepads ->
-                       []
 
-                   OnePlayerUsesKeyboardAndMouse ->
-                       [ ( SourceKeyboardAndMouse, keyboardAndMouseToInputState model ) ]
+gamepadToInputState : Gamepad -> Game.InputState
+gamepadToInputState gamepad =
+    let
+        aimDirection =
+            vec2 (Gamepad.rightX gamepad) (Gamepad.rightY gamepad)
 
-           gamepadToTuple gamepad =
-               ( gamepad |> Gamepad.getIndex |> SourceGamepad, gamepadToInputState gamepad )
+        fire =
+            Gamepad.aIsPressed gamepad
 
-           gamepadInputs =
-               gamepads |> List.map gamepadToTuple
-       in
-           keyboardInputs ++ gamepadInputs
--}
+        move =
+            vec2 (Gamepad.leftX gamepad) (Gamepad.leftY gamepad)
+    in
+        { finalAim = Game.AimRelative aimDirection
+        , fire = fire
+        , move = move
+        }
+
+
+
 -- update
 
 

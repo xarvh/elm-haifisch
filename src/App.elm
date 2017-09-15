@@ -66,141 +66,6 @@ init dateNow =
 
 
 
--- mouse aim
-{-
-   getPlayerMouseAim : Model -> Input.Source -> Mouse.Position -> Vec2
-   getPlayerMouseAim model inputSource mousePositionInWindowCoordinates =
-       let
-           findPlayerIdThatHasController controller =
-               List.Extra.find (\( c, playerId ) -> c == controller) model.controllersAndPlayerIds
-                   |> Maybe.map Tuple.second
-
-           findShipOwnedByPlayerId playerId =
-               Dict.Extra.find (\shipId ship -> ship.playerId == playerId) model.game.shipsById
-
-           maybeControlledShip =
-               findPlayerIdThatHasController (ControllerHuman inputSource)
-                   |> Maybe.andThen findShipOwnedByPlayerId
-       in
-           case maybeControlledShip of
-               Nothing ->
-                   vec2 0 1
-
-               Just ( shipId, ship ) ->
-                   let
-                       -- Window coordinates, in pixel (Y axis points down)
-                       mousePixelX =
-                           toFloat mousePositionInWindowCoordinates.x
-
-                       mousePixelY =
-                           toFloat mousePositionInWindowCoordinates.y
-
-                       pixelW =
-                           toFloat model.windowSizeInPixels.width
-
-                       pixelH =
-                           toFloat model.windowSizeInPixels.height
-
-                       -- Game coordinates (Y axis points up)
-                       ( gameW, gameH ) =
-                           Vec2.toTuple model.windowSizeInGameCoordinates
-
-                       mouseGameX =
-                           gameW * (mousePixelX - pixelW / 2) / pixelW
-
-                       mouseGameY =
-                           gameH * (pixelH / 2 - mousePixelY - 1) / pixelH
-
-                       mouseGamePos =
-                           vec2 mouseGameX mouseGameY
-                   in
-                       Vec2.sub mouseGamePos ship.position |> Vec2.normalize
-
-
-   resolveMouseAim : Model -> Input.Source -> Input.RawInputState -> InputState
-   resolveMouseAim model inputSource rawInputState =
-       let
-           finalAim =
-               case rawInputState.finalAim of
-                   Input.Direction direction ->
-                       direction
-
-                   Input.ScreenPosition position ->
-                       getPlayerMouseAim model inputSource position
-       in
-           { finalAim = finalAim
-           , fire = rawInputState.fire
-           , move = rawInputState.move
-           }
-
-
-
-   -- input
-
-
-   manageInput : Config -> Gamepad.Blob -> Model -> ( Model, Dict Id InputState )
-   manageInput config blob model =
-       let
-           inputSourcesAndRawStates =
-               Input.sourcesAndStates
-                   config.maybeInputConfig
-                   (Gamepad.getGamepads config.gamepadDatabase blob)
-                   model.input
-
-           humanControllersAndStates =
-               inputSourcesAndRawStates
-                   |> List.map (\( source, raw ) -> ( ControllerHuman source, resolveMouseAim model source raw ))
-
-           botsAndStates =
-               model.bots |> List.map (Bots.think model.game)
-
-           botControllersAndStates =
-               botsAndStates |> List.map (Tuple.mapFirst (.id >> ControllerBot))
-
-           controllersAndStates =
-               humanControllersAndStates ++ botControllersAndStates
-
-           --
-           findPlayerId ( controller, state ) =
-               model.controllersAndPlayerIds
-                   |> List.Extra.find (\( c, id ) -> c == controller)
-                   |> Maybe.map (\( c, id ) -> ( id, state ))
-
-           stateByPlayerId =
-               controllersAndStates
-                   |> List.filterMap findPlayerId
-                   |> Dict.fromList
-
-           --
-           controllersWithAPlayer =
-               model.controllersAndPlayerIds
-                   |> List.map Tuple.first
-
-           controllersWithoutAPlayer =
-               controllersAndStates
-                   |> List.map Tuple.first
-                   |> List.filter (\c -> not <| List.member c controllersWithAPlayer)
-
-           addPlayer : Controller -> ( Game.Model, List ( Controller, Id ) ) -> ( Game.Model, List ( Controller, Id ) )
-           addPlayer controller ( oldGame, cAndIds ) =
-               let
-                   ( newGame, player ) =
-                       Game.addPlayer oldGame
-               in
-                   ( newGame, ( controller, player.id ) :: cAndIds )
-
-           ( game, controllersAndPlayerIds ) =
-               controllersWithoutAPlayer
-                   |> List.foldl addPlayer ( model.game, model.controllersAndPlayerIds )
-       in
-           ( { model
-               | game = game
-               , controllersAndPlayerIds = controllersAndPlayerIds
-               , bots = botsAndStates |> List.map Tuple.first
-             }
-           , stateByPlayerId
-           )
--}
 -- update
 
 
@@ -222,6 +87,34 @@ resizeWindow sizeInPixels model =
             , windowSizeInGameCoordinates = vec2 internalCoordinatesWidth internalCoordinatesHeight
         }
 
+
+windowToGameCoordinates : Model -> { x : Int, y : Int } -> Vec2
+windowToGameCoordinates model positionInPixels =
+    let
+        -- Window coordinates, in pixel (Y axis points down)
+        pixelX =
+            toFloat positionInPixels.x
+
+        pixelY =
+            toFloat positionInPixels.y
+
+        pixelW =
+            toFloat model.windowSizeInPixels.width
+
+        pixelH =
+            toFloat model.windowSizeInPixels.height
+
+        -- Game coordinates (Y axis points up)
+        ( gameW, gameH ) =
+            Vec2.toTuple model.windowSizeInGameCoordinates
+
+        gameX =
+            gameW * (pixelX - pixelW / 2) / pixelW
+
+        gameY =
+            gameH * (pixelH / 2 - pixelY - 1) / pixelH
+    in
+        vec2 gameX gameY
 
 
 {-
@@ -254,21 +147,18 @@ updateAnimationFrame config dt blob model =
         activeInputDevices =
             Input.activeInputDevices config.maybeInputConfig gamepads
 
+        inputSystemArgs =
+            { input = model.input
+            , gamepads = gamepads
+            , useKeyboardAndMouse = Input.config config.maybeInputConfig gamepads == Input.OnePlayerUsesKeyboardAndMouse
+            , windowToGameCoordinates = windowToGameCoordinates model
+            }
+
         game =
             model.game
                 |> Systems.Input.createPlayersForStrayInputs activeInputDevices
+                |> Systems.Input.applyInputStatesToPlayers inputSystemArgs
                 |> Systems.SpawnShips.spawnShipsForPlayersWithoutAShip
-
-        {-
-           ( model, inputStatesByPlayerId ) =
-               manageInput config blob oldModel
-
-           ( game, events ) =
-               Game.tick inputStatesByPlayerId dt model.game
-
-           cmds =
-               List.map eventToCmd events
-        -}
     in
         ( { model | game = game }, Cmd.none )
 
