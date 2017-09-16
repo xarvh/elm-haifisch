@@ -193,7 +193,6 @@ init seed =
     , cShip = Dict.empty
 
     --
-    --, bots = Array.empty
     , seed = seed
     , shuffledColorPatterns = Random.step (Random.List.shuffle ColorPattern.patterns) seed |> Tuple.first
     }
